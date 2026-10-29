@@ -19,6 +19,14 @@
           "duration": 194,
           "year": 2026,
           "cover": "img/covers/shamag-01.jpg"
+        },
+        {
+          "id": "shamag-02",
+          "title": "Я РУССКИЙ",
+          "src": "audio/shamag/shamag-02.mp3",
+          "duration": 210,
+          "year": 2026,
+          "cover": "img/covers/shamag-02.jpg"
         }
       ]
     },
