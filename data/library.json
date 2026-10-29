@@ -6,92 +6,10 @@
   },
   "artists": [
     {
-      "id": "berezovyi-svet",
-      "name": "Берёзовый свет",
-      "genre": "Фолк",
-      "bio": "Тёплый фолк о деревне, реке и тишине. Живые струнные, мягкий голос и звуки утреннего леса.",
-      "photo": null,
-      "tracks": [
-        {
-          "id": "bs-01",
-          "title": "Утренний туман",
-          "album": "Дом у реки",
-          "src": "audio/demo/berezovyi-svet.wav",
-          "duration": 12,
-          "year": 2026,
-          "cover": null
-        },
-        {
-          "id": "bs-02",
-          "title": "Река-матушка",
-          "album": "Дом у реки",
-          "src": "audio/demo/berezovyi-svet.wav",
-          "duration": 12,
-          "year": 2026,
-          "cover": null
-        },
-        {
-          "id": "bs-03",
-          "title": "Поле зовёт",
-          "album": "Дом у реки",
-          "src": "audio/demo/berezovyi-svet.wav",
-          "duration": 12,
-          "year": 2026,
-          "cover": null
-        },
-        {
-          "id": "bs-04",
-          "title": "Тихая заря",
-          "album": "Дом у реки",
-          "src": "audio/demo/berezovyi-svet.wav",
-          "duration": 12,
-          "year": 2026,
-          "cover": null
-        }
-      ]
-    },
-    {
-      "id": "severnyi-veter",
-      "name": "Северный ветер",
-      "genre": "Рок",
-      "bio": "Гитарный рок о дороге, ветре и характере. Громко там, где нужно, и тихо там, где важно.",
-      "photo": null,
-      "tracks": [
-        {
-          "id": "sv-01",
-          "title": "На краю",
-          "album": "Против ветра",
-          "src": "audio/demo/severnyi-veter.wav",
-          "duration": 12,
-          "year": 2025,
-          "cover": null
-        },
-        {
-          "id": "sv-02",
-          "title": "Вольная",
-          "album": "Против ветра",
-          "src": "audio/demo/severnyi-veter.wav",
-          "duration": 12,
-          "year": 2025,
-          "cover": null
-        },
-        {
-          "id": "sv-03",
-          "title": "Огонь в груди",
-          "album": "Против ветра",
-          "src": "audio/demo/severnyi-veter.wav",
-          "duration": 12,
-          "year": 2025,
-          "cover": null
-        }
-      ]
-    },
-    {
       "id": "anna-vetrova",
       "name": "Анна Ветрова",
       "genre": "Этно-поп",
       "bio": "Современный поп с народными мотивами: чистый вокал, живые барабаны и мелодии, которые остаются с тобой.",
-      "photo": null,
       "tracks": [
         {
           "id": "av-01",
@@ -99,8 +17,7 @@
           "album": "Родная",
           "src": "audio/demo/anna-vetrova.wav",
           "duration": 12,
-          "year": 2026,
-          "cover": null
+          "year": 2026
         },
         {
           "id": "av-02",
@@ -108,8 +25,7 @@
           "album": "Родная",
           "src": "audio/demo/anna-vetrova.wav",
           "duration": 12,
-          "year": 2026,
-          "cover": null
+          "year": 2026
         },
         {
           "id": "av-03",
@@ -117,8 +33,7 @@
           "album": "Родная",
           "src": "audio/demo/anna-vetrova.wav",
           "duration": 12,
-          "year": 2026,
-          "cover": null
+          "year": 2026
         }
       ]
     }
