@@ -566,12 +566,14 @@ body:not(.is-playing) .eq span {
 }
 
 .avatar {
+  position: relative;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   width: 54px;
   height: 54px;
   border-radius: 15px;
+  overflow: hidden;
   background:
     radial-gradient(120% 120% at 20% 10%, rgba(255, 255, 255, 0.22), transparent 45%),
     linear-gradient(145deg, var(--c1, #6b2b28), var(--c2, #e2493f));
@@ -582,6 +584,20 @@ body:not(.is-playing) .eq span {
   text-transform: uppercase;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   user-select: none;
+}
+
+.avatar__letters {
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.avatar__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .artist-card__info {
@@ -795,12 +811,12 @@ body:not(.is-playing) .eq span {
 
 .track {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   width: 100%;
   min-height: 58px;
-  padding: 9px 12px 9px 8px;
+  padding: 8px 12px 8px 8px;
   border: 1px solid transparent;
   border-radius: 14px;
   background: transparent;
@@ -818,30 +834,55 @@ body:not(.is-playing) .eq span {
   background: rgba(226, 73, 63, 0.08);
 }
 
-.track__lead {
+.track__cover {
+  position: relative;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 34px;
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 120% at 20% 10%, rgba(255, 255, 255, 0.2), transparent 45%),
+    linear-gradient(145deg, var(--c1, #6b2b28), var(--c2, #e2493f));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  user-select: none;
 }
 
-.track__num {
-  color: #757c87;
-  font-size: 12.5px;
-  font-variant-numeric: tabular-nums;
+.track__cover-letter {
+  color: rgba(255, 255, 255, 0.94);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.track__eq {
+.track__cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.track__playing {
+  position: absolute;
+  inset: 0;
   display: none;
-  justify-content: center;
+  place-items: center;
+  background: rgba(10, 12, 15, 0.6);
+  backdrop-filter: blur(1px);
 }
 
-.track.is-active .track__num {
-  display: none;
+.track__playing .eq {
+  height: 15px;
 }
 
-.track.is-active .track__eq {
-  display: flex;
+.track.is-active .track__playing {
+  display: grid;
 }
 
 .track__main {
@@ -1021,12 +1062,14 @@ body:not(.is-playing) .eq span {
 }
 
 .player__art {
+  position: relative;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
   border-radius: 12px;
+  overflow: hidden;
   background:
     radial-gradient(120% 120% at 20% 10%, rgba(255, 255, 255, 0.22), transparent 45%),
     linear-gradient(145deg, var(--c1, #6b2b28), var(--c2, #e2493f));
@@ -1037,8 +1080,23 @@ body:not(.is-playing) .eq span {
   font-size: 17px;
   font-weight: 600;
   line-height: 1;
+  text-transform: uppercase;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
   user-select: none;
+}
+
+.player__art-letter {
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.player__art-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .player__meta {

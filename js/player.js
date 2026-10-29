@@ -3,7 +3,7 @@
  * Живёт вне экранов: переходы по сайту не прерывают музыку.
  */
 
-import { formatTime, gradientVars, initialOf, shuffle } from "./data.js";
+import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261029";
 
 export class Player {
   constructor(root) {
@@ -20,6 +20,8 @@ export class Player {
 
     this.ui = {
       art: root.querySelector("#player-art"),
+      artLetter: root.querySelector("#player-art-letter"),
+      artImg: root.querySelector("#player-art-img"),
       title: root.querySelector("#player-title"),
       artist: root.querySelector("#player-artist"),
       seek: root.querySelector("#seek"),
@@ -169,16 +171,22 @@ export class Player {
   }
 
   #renderTrack(track) {
-    const { art, title, artist, seek, toggle } = this.ui;
+    const { art, artLetter, artImg, title, artist, seek, toggle } = this.ui;
     this.root.hidden = false;
 
+    art.style.cssText = gradientVars(track.id || track.artistId);
+    artLetter.textContent = initialsOf(track.title);
+    artImg.hidden = true;
+    artImg.removeAttribute("src");
+
     if (track.cover) {
-      art.style.backgroundImage = `url("${track.cover}")`;
-      art.textContent = "";
-    } else {
-      art.style.cssText = gradientVars(track.artistId);
-      art.style.backgroundImage = "";
-      art.textContent = initialOf(track.artistName);
+      artImg.onload = () => {
+        artImg.hidden = false;
+      };
+      artImg.onerror = () => {
+        artImg.hidden = true;
+      };
+      artImg.src = track.cover;
     }
 
     art.title = track.artistName;

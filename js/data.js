@@ -43,7 +43,7 @@ function normalize(raw) {
           artistName: String(a.name),
           duration: Number(t.duration) || 0,
           year: t.year ?? null,
-          cover: t.cover || null,
+          cover: t.cover ? String(t.cover) : null,
         }));
 
       return {
@@ -52,7 +52,7 @@ function normalize(raw) {
         name: String(a.name),
         genre: a.genre || "",
         bio: a.bio || "",
-        photo: a.photo || null,
+        photo: a.photo ? String(a.photo) : null,
         tracks,
       };
     });
@@ -75,9 +75,24 @@ export function paletteFor(seed) {
   return PALETTES[hash % PALETTES.length];
 }
 
-export function initialOf(name) {
-  const first = String(name || "").trim().charAt(0);
-  return first ? first.toUpperCase() : "М";
+/**
+ * Буквы-заглушка: до двух первых букв слов.
+ * «Берёзовый свет» → «БС», «Анна» → «А».
+ */
+export function initialsOf(name) {
+  const words = String(name ?? "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  let result = "";
+  for (const word of words) {
+    if (result.length >= 2) break;
+    const letter = word.charAt(0).toUpperCase();
+    if (!result.includes(letter)) result += letter;
+  }
+
+  return result || "М";
 }
 
 /** CSS-переменные для градиентной заглушки. */

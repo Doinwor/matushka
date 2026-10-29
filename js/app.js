@@ -9,10 +9,10 @@ import {
   escapeHtml,
   formatTime,
   gradientVars,
-  initialOf,
+  initialsOf,
   pluralTracks,
-} from "./data.js";
-import { Player } from "./player.js";
+} from "./data.js?v=20261029";
+import { Player } from "./player.js?v=20261029";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
 
@@ -186,7 +186,7 @@ function renderArtist(id) {
     .join(" · ");
 
   const rows = artist.tracks
-    .map((track, index) => trackRow(track, artist, index))
+    .map((track) => trackRow(track, artist))
     .join("");
 
   view.innerHTML = `
@@ -232,16 +232,19 @@ function renderArtist(id) {
     </div>`;
 }
 
-function trackRow(track, artist, index) {
+function trackRow(track, artist) {
   const sub = track.album || (track.year ? String(track.year) : "Сингл");
 
   return `
     <button class="track" type="button"
             data-track-id="${escapeHtml(track.id)}"
             data-artist-id="${escapeHtml(artist.id)}">
-      <span class="track__lead">
-        <span class="track__num">${String(index + 1).padStart(2, "0")}</span>
-        <span class="track__eq eq" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span class="track__cover" style="${gradientVars(track.id)}">
+        <span class="track__cover-letter" aria-hidden="true">${escapeHtml(initialsOf(track.title))}</span>
+        ${imageHtml("track__cover-img", track.cover)}
+        <span class="track__playing" aria-hidden="true">
+          <span class="eq"><span></span><span></span><span></span></span>
+        </span>
       </span>
       <span class="track__main">
         <span class="track__title">${escapeHtml(track.title)}</span>
@@ -253,10 +256,21 @@ function trackRow(track, artist, index) {
 
 function avatarHtml(artist) {
   const style = gradientVars(artist.id);
-  if (artist.photo) {
-    return `<span class="avatar" style="${style};background-image:url('${escapeHtml(artist.photo)}');background-size:cover;background-position:center"></span>`;
-  }
-  return `<span class="avatar" style="${style}">${escapeHtml(initialOf(artist.name))}</span>`;
+  return `
+    <span class="avatar" style="${style}">
+      <span class="avatar__letters" aria-hidden="true">${escapeHtml(initialsOf(artist.name))}</span>
+      ${imageHtml("avatar__img", artist.photo)}
+    </span>`;
+}
+
+/**
+ * Картинка поверх градиентной заглушки.
+ * Если файла нет или он не открылся — картинка убирается, остаются буквы.
+ */
+function imageHtml(className, src) {
+  if (!src) return "";
+  return `<img class="${className}" src="${escapeHtml(src)}" alt=""
+               loading="lazy" decoding="async" onerror="this.remove()">`;
 }
 
 /* ============================== Плеер и «Волна» ============================== */

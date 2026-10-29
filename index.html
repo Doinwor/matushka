@@ -15,7 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20261029">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
@@ -48,7 +48,10 @@
     </div>
 
     <div class="player__body">
-      <div class="player__art" id="player-art" aria-hidden="true">М</div>
+      <div class="player__art" id="player-art" aria-hidden="true">
+        <span class="player__art-letter" id="player-art-letter">М</span>
+        <img class="player__art-img" id="player-art-img" alt="" decoding="async" hidden>
+      </div>
 
       <div class="player__meta">
         <div class="player__title" id="player-title">—</div>
@@ -82,6 +85,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js?v=20261029"></script>
 </body>
 </html>
