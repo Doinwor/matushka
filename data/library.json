@@ -67,6 +67,14 @@
           "duration": 153,
           "year": 2018,
           "cover": "img/covers/oleg-gazmanov-02.jpg"
+        },
+        {
+          "id": "oleg-gazmanov-03",
+          "title": "Вперед Россия",
+          "src": "audio/oleg-gazmanov/oleg-gazmanov-03.mp3",
+          "duration": 198,
+          "year": 2015,
+          "cover": "img/covers/oleg-gazmanov-03.jpg"
         }
       ]
     }
