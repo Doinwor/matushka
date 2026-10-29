@@ -93,6 +93,22 @@
           "cover": "img/covers/sergey-trofimov-01.jpg"
         }
       ]
+    },
+    {
+      "id": "tatyana-kurtukova",
+      "name": "Татьяна Куртукова",
+      "bio": "является ярким представителем новой волны русской фолк-музыки, объединяя в своем творчестве аутентичные мотивы и современный поп-саунд. Широкую известность певице принес суперхит «Матушка», а также такие композиции, как «Одного» и «Ромашка-Василёк».",
+      "photo": "img/artists/tatyana-kurtukova.jpeg",
+      "tracks": [
+        {
+          "id": "tatyana-kurtukova-01",
+          "title": "Матушка",
+          "src": "audio/tatyana-kurtukova/tatyana-kurtukova-01.mp3",
+          "duration": 173,
+          "year": 2022,
+          "cover": "img/covers/tatyana-kurtukova-01.jpg"
+        }
+      ]
     }
   ]
 }
