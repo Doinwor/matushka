@@ -45,6 +45,30 @@
           "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-01.jpg"
         }
       ]
+    },
+    {
+      "id": "oleg-gazmanov",
+      "name": "Олег Газманов",
+      "bio": "Олег Газманов — легенда отечественной эстрады, Народный артист России, певец, композитор и поэт. Его творчество уникально сочетает в себе энергичный поп-рок, душевную лирику и масштабные патриотические песни.",
+      "photo": "img/artists/oleg-gazmanov.jpg",
+      "tracks": [
+        {
+          "id": "oleg-gazmanov-01",
+          "title": "Офицеры",
+          "src": "audio/oleg-gazmanov/oleg-gazmanov-01.mp3",
+          "duration": 319,
+          "year": 1991,
+          "cover": "img/covers/oleg-gazmanov-01.jpg"
+        },
+        {
+          "id": "oleg-gazmanov-02",
+          "title": "Бессмертный полк",
+          "src": "audio/oleg-gazmanov/oleg-gazmanov-02.mp3",
+          "duration": 153,
+          "year": 2018,
+          "cover": "img/covers/oleg-gazmanov-02.jpg"
+        }
+      ]
     }
   ]
 }
