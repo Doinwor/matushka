@@ -1,0 +1,20 @@
+{
+  "name": "Матушка — русская музыка",
+  "short_name": "Матушка",
+  "description": "Национальный музыкальный плеер: моя волна, артисты и их треки.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0e11",
+  "theme_color": "#0c0e11",
+  "icons": [
+    {
+      "src": "img/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

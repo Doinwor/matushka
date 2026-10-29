@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c0e11">
+  <meta name="description" content="Матушка — национальный музыкальный плеер. Моя волна, артисты и их треки.">
+  <title>Матушка — русская музыка</title>
+
+  <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/icon.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#view">Перейти к содержимому</a>
+
+  <div class="page">
+    <header class="topbar">
+      <a class="brand" href="#/" aria-label="Матушка — на главную">
+        <span class="brand__word">Матушка</span>
+        <span class="brand__line" aria-hidden="true"></span>
+      </a>
+
+      <button class="wave-pill" id="top-wave" type="button" title="Моя волна" aria-label="Включить мою волну">
+        <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="wave-pill__text">Волна</span>
+      </button>
+    </header>
+
+    <main class="view" id="view" tabindex="-1"></main>
+
+    <footer class="footer">
+      <span class="footer__flag" aria-hidden="true"></span>
+      <p>Матушка · русская музыка · 2026</p>
+    </footer>
+  </div>
+
+  <div class="player" id="player" hidden>
+    <div class="player__seek">
+      <input type="range" id="seek" min="0" max="1000" step="1" value="0"
+             aria-label="Позиция трека" tabindex="-1">
+    </div>
+
+    <div class="player__body">
+      <div class="player__art" id="player-art" aria-hidden="true">М</div>
+
+      <div class="player__meta">
+        <div class="player__title" id="player-title">—</div>
+        <div class="player__artist" id="player-artist">—</div>
+      </div>
+
+      <div class="player__controls">
+        <button class="icon-btn" id="prev" type="button" aria-label="Предыдущий трек">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 5v14M20 5.5v13a1 1 0 0 1-1.55.83L9 13.83a1 1 0 0 1 0-1.66l9.45-5.5A1 1 0 0 1 20 5.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn icon-btn--play" id="toggle" type="button" aria-label="Играть">
+          <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5Z" fill="currentColor"/>
+          </svg>
+          <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 5h3.2a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm6.8 0H17a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-3.2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" fill="currentColor"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn" id="next" type="button" aria-label="Следующий трек">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18 5v14M4 5.5v13a1 1 0 0 0 1.55.83L15 13.83a1 1 0 0 0 0-1.66L5.55 4.67A1 1 0 0 0 4 5.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

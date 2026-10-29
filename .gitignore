@@ -1,0 +1,13 @@
+# Служебное
+admin/config.json
+admin/.token
+*.log
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Локальные настройки
+.env
