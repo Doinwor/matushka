@@ -77,6 +77,22 @@
           "cover": "img/covers/oleg-gazmanov-03.jpg"
         }
       ]
+    },
+    {
+      "id": "sergey-trofimov",
+      "name": "Сергей Трофимов",
+      "bio": "Известный российский автор-исполнитель, поэт, композитор и Заслуженный артист РФ. Его творчество уникально сочетает в себе душевную городскую лирику, искреннюю бардовскую песню, элементы рока и благородный русский шансон.",
+      "photo": "img/artists/sergey-trofimov.jpg",
+      "tracks": [
+        {
+          "id": "sergey-trofimov-01",
+          "title": "Родина",
+          "src": "audio/sergey-trofimov/sergey-trofimov-01.mp3",
+          "duration": 224,
+          "year": 2006,
+          "cover": "img/covers/sergey-trofimov-01.jpg"
+        }
+      ]
     }
   ]
 }
