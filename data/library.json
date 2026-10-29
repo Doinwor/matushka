@@ -36,6 +36,12 @@
           "year": 2026
         }
       ]
+    },
+    {
+      "id": "shamag",
+      "name": "Шамаг",
+      "photo": "img/artists/shamag.jpg",
+      "tracks": []
     }
   ]
 }
