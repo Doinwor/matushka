@@ -112,6 +112,38 @@
           "cover": "img/covers/tatyana-kurtukova-01.jpg"
         }
       ]
+    },
+    {
+      "id": "aleksandr-vanyushkin",
+      "name": "Александр Ванюшкин",
+      "bio": "Российский музыкант, поэт, автор-исполнитель и лидер музыкальной группы «Наши». Музыкальная платформа Звук относит его к числу артистов современной патриотической песни. про СВО",
+      "photo": "img/artists/aleksandr-vanyushkin.jpg",
+      "tracks": [
+        {
+          "id": "aleksandr-vanyushkin-01",
+          "title": "333",
+          "src": "audio/aleksandr-vanyushkin/aleksandr-vanyushkin-01.mp3",
+          "duration": 161,
+          "year": 2023,
+          "cover": "img/covers/aleksandr-vanyushkin-01.jpg"
+        }
+      ]
+    },
+    {
+      "id": "st-aleksandr-stepanov",
+      "name": "ST (Александр Степанов)",
+      "bio": "один из самых заметных и разноплановых артистов российской хип-хоп сцены, один из самых заметных и разноплановых артистов российской хип-хоп сцены, поэт, телеведущий и соавтор множества эстрадных суперхитов. Начав свой путь в середине 2000-х с ярких побед в рэп-баттлах, он вырос в большого самобытного художника.",
+      "photo": "img/artists/st-aleksandr-stepanov.jpg",
+      "tracks": [
+        {
+          "id": "st-aleksandr-stepanov-01",
+          "title": "Дай ему сил",
+          "src": "audio/st-aleksandr-stepanov/st-aleksandr-stepanov-01.mp3",
+          "duration": 187,
+          "year": 2024,
+          "cover": "img/covers/st-aleksandr-stepanov-01.jpg"
+        }
+      ]
     }
   ]
 }
