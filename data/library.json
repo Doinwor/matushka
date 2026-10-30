@@ -45,7 +45,8 @@
           "src": "audio/prezidentskiy-orkestr-rossiyskoy-federatsi/prezidentskiy-orkestr-rossiyskoy-federatsi-01.mp3",
           "duration": 213,
           "year": 2026,
-          "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-01.jpg"
+          "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-01.jpg",
+          "hidden": true
         }
       ]
     },
