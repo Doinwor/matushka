@@ -1,9 +1,13 @@
 /**
  * Плеер «Матушка».
  * Живёт вне экранов: переходы по сайту не прерывают музыку.
+ * На телефоне открывается на весь экран, на ПК — плавающей панелью.
  */
 
-import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261029";
+import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261030";
+
+const VOLUME_KEY = "matushka:volume";
+const MOBILE_QUERY = "(max-width: 899px)";
 
 export class Player {
   constructor(root) {
@@ -28,11 +32,18 @@ export class Player {
       toggle: root.querySelector("#toggle"),
       prev: root.querySelector("#prev"),
       next: root.querySelector("#next"),
+      close: root.querySelector("#player-close"),
+      backdrop: root.querySelector(".player__backdrop"),
+      timeCurrent: root.querySelector("#time-current"),
+      timeTotal: root.querySelector("#time-total"),
+      volume: root.querySelector("#volume"),
+      mute: root.querySelector("#mute"),
     };
 
     this.#bindUi();
     this.#bindAudio();
     this.#bindMediaSession();
+    this.#restoreVolume();
   }
 
   get current() {
@@ -155,6 +166,7 @@ export class Player {
     this.audio.load();
     this.#renderTrack(track);
     this.#setFill(0);
+    this.#setTime(0, track.duration || 0);
 
     if (autoplay) this.#play();
     this.#emit();
@@ -171,7 +183,7 @@ export class Player {
   }
 
   #renderTrack(track) {
-    const { art, artLetter, artImg, title, artist, seek, toggle } = this.ui;
+    const { art, artLetter, artImg, title, artist, seek, toggle, timeCurrent, timeTotal } = this.ui;
     this.root.hidden = false;
 
     art.style.cssText = gradientVars(track.id || track.artistId);
@@ -187,6 +199,9 @@ export class Player {
         artImg.hidden = true;
       };
       artImg.src = track.cover;
+      this.ui.backdrop.style.backgroundImage = `url("${String(track.cover).replaceAll('"', "%22")}")`;
+    } else {
+      this.ui.backdrop.style.backgroundImage = "none";
     }
 
     art.title = track.artistName;
@@ -194,6 +209,8 @@ export class Player {
     artist.textContent = track.artistName;
     seek.value = "0";
     seek.setAttribute("aria-valuetext", `${track.title}, ${track.artistName}`);
+    timeCurrent.textContent = "0:00";
+    timeTotal.textContent = formatTime(track.duration);
 
     toggle.setAttribute("aria-label", "Играть");
 
@@ -210,7 +227,7 @@ export class Player {
   }
 
   #bindUi() {
-    const { toggle, prev, next, seek } = this.ui;
+    const { toggle, prev, next, seek, volume, mute, art, close, backdrop } = this.ui;
 
     toggle.addEventListener("click", () => this.toggle());
     prev.addEventListener("click", () => this.prev());
@@ -221,7 +238,42 @@ export class Player {
       if (!Number.isFinite(duration) || duration <= 0) return;
       this.audio.currentTime = (Number(seek.value) / 1000) * duration;
       this.#setFill((Number(seek.value) / 1000) * 100);
+      this.#setTime(this.audio.currentTime, duration);
     });
+
+    volume.addEventListener("input", () => {
+      const value = Math.min(1, Math.max(0, Number(volume.value) || 0));
+      this.audio.muted = value === 0;
+      this.audio.volume = value;
+      this.#setVolumeFill(value);
+      this.#syncMute();
+      this.#saveVolume(value);
+    });
+
+    mute.addEventListener("click", () => {
+      this.audio.muted = !this.audio.muted;
+      this.#syncMute();
+    });
+
+    art.addEventListener("click", () => this.#toggleOpen());
+    close.addEventListener("click", () => this.#close());
+    backdrop.addEventListener("click", () => this.#close());
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && this.root.classList.contains("is-open")) {
+        this.#close();
+      }
+    });
+
+    const mobile = window.matchMedia(MOBILE_QUERY);
+    const onChange = () => {
+      if (!mobile.matches) this.#close();
+    };
+    if (typeof mobile.addEventListener === "function") {
+      mobile.addEventListener("change", onChange);
+    } else if (typeof mobile.addListener === "function") {
+      mobile.addListener(onChange);
+    }
   }
 
   #bindAudio() {
@@ -229,15 +281,20 @@ export class Player {
       const duration = this.audio.duration;
       if (!Number.isFinite(duration) || duration <= 0) return;
       this.#setFill((this.audio.currentTime / duration) * 100);
+      this.#setTime(this.audio.currentTime, duration);
     });
 
     this.audio.addEventListener("loadedmetadata", () => {
       this.#setFill(0);
+      if (Number.isFinite(this.audio.duration) && this.audio.duration > 0) {
+        this.#setTime(this.audio.currentTime, this.audio.duration);
+      }
       this.#emit();
     });
 
     this.audio.addEventListener("play", () => this.#emit());
     this.audio.addEventListener("pause", () => this.#emit());
+    this.audio.addEventListener("volumechange", () => this.#syncMute());
 
     this.audio.addEventListener("ended", () => this.next({ auto: true }));
 
@@ -280,12 +337,82 @@ export class Player {
     }
   }
 
+  /* ---------- Полноэкранный плеер ---------- */
+
+  #toggleOpen() {
+    if (!this.current) return;
+    if (!window.matchMedia(MOBILE_QUERY).matches) return;
+
+    if (this.root.classList.contains("is-open")) {
+      this.#close();
+    } else {
+      this.root.classList.add("is-open");
+      document.body.classList.add("player-open");
+      this.ui.art.setAttribute("aria-expanded", "true");
+      this.ui.close.focus({ preventScroll: true });
+    }
+  }
+
+  #close() {
+    if (!this.root.classList.contains("is-open")) return;
+    this.root.classList.remove("is-open");
+    document.body.classList.remove("player-open");
+    this.ui.art.setAttribute("aria-expanded", "false");
+    this.ui.art.focus({ preventScroll: true });
+  }
+
+  /* ---------- Громкость и время ---------- */
+
+  #restoreVolume() {
+    let value = 1;
+    try {
+      const saved = localStorage.getItem(VOLUME_KEY);
+      if (saved !== null) value = Number(saved);
+    } catch {
+      /* приватный режим */
+    }
+    if (!Number.isFinite(value)) value = 1;
+    value = Math.min(1, Math.max(0, value));
+
+    this.audio.volume = value;
+    this.audio.muted = value === 0;
+    this.ui.volume.value = String(value);
+    this.#setVolumeFill(value);
+    this.#syncMute();
+  }
+
+  #saveVolume(value) {
+    try {
+      localStorage.setItem(VOLUME_KEY, String(value));
+    } catch {
+      /* приватный режим */
+    }
+  }
+
+  #setVolumeFill(value) {
+    this.ui.volume.style.setProperty("--v", `${Math.round(value * 100)}%`);
+  }
+
+  #syncMute() {
+    const muted = this.audio.muted || this.audio.volume === 0;
+    this.ui.mute.classList.toggle("is-muted", muted);
+    this.ui.mute.setAttribute("aria-pressed", String(muted));
+    this.ui.mute.setAttribute("aria-label", muted ? "Включить звук" : "Выключить звук");
+    this.#setVolumeFill(this.audio.muted ? 0 : this.audio.volume);
+  }
+
   #setFill(percent) {
     const value = Math.max(0, Math.min(100, percent));
     this.ui.seek.style.setProperty("--p", `${value}%`);
   }
 
+  #setTime(current, total) {
+    this.ui.timeCurrent.textContent = formatTime(current);
+    this.ui.timeTotal.textContent = formatTime(total);
+  }
+
   #emit() {
+    this.ui.toggle.setAttribute("aria-label", this.isPlaying ? "Пауза" : "Играть");
     this.onStateChange?.(this.current);
   }
 }

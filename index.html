@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0c0e11">
+  <meta name="theme-color" content="#07080a">
+  <meta name="color-scheme" content="dark">
   <meta name="description" content="Матушка — национальный музыкальный плеер. Моя волна, артисты и их треки.">
   <title>Матушка — русская музыка</title>
 
@@ -15,25 +16,47 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=20261029">
+  <link rel="stylesheet" href="css/style.css?v=20261030">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
 
-  <div class="page">
-    <header class="topbar">
+  <div class="ambient" aria-hidden="true">
+    <span class="ambient__glow ambient__glow--red"></span>
+    <span class="ambient__glow ambient__glow--blue"></span>
+    <span class="ambient__grain"></span>
+  </div>
+
+  <header class="topbar">
+    <div class="topbar__inner">
       <a class="brand" href="#/" aria-label="Матушка — на главную">
-        <span class="brand__word">Матушка</span>
-        <span class="brand__line" aria-hidden="true"></span>
+        <span class="brand__mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </span>
+        <span class="brand__text">
+          <span class="brand__word">Матушка</span>
+          <span class="brand__sub">русская музыка</span>
+        </span>
       </a>
 
-      <button class="wave-pill" id="top-wave" type="button" title="Моя волна" aria-label="Включить мою волну">
+      <button class="wave-pill" id="top-wave" type="button" title="Моя волна"
+              aria-label="Включить мою волну" aria-pressed="false">
         <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span class="wave-pill__text">Волна</span>
+        <span class="wave-pill__text">Моя волна</span>
       </button>
-    </header>
+    </div>
+  </header>
 
-    <main class="view" id="view" tabindex="-1"></main>
+  <div class="page">
+    <main class="view" id="view" tabindex="-1">
+      <div class="skeleton" aria-hidden="true">
+        <div class="skeleton__hero"></div>
+        <div class="skeleton__line"></div>
+        <div class="skeleton__grid">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </main>
 
     <footer class="footer">
       <span class="footer__flag" aria-hidden="true"></span>
@@ -42,16 +65,20 @@
   </div>
 
   <div class="player" id="player" hidden>
-    <div class="player__seek">
-      <input type="range" id="seek" min="0" max="1000" step="1" value="0"
-             aria-label="Позиция трека" tabindex="-1">
-    </div>
+    <div class="player__backdrop" aria-hidden="true"></div>
 
-    <div class="player__body">
-      <div class="player__art" id="player-art" aria-hidden="true">
+    <div class="player__panel">
+      <button class="player__close" id="player-close" type="button" aria-label="Свернуть плеер">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <button class="player__art" id="player-art" type="button"
+              aria-label="Открыть плеер" aria-expanded="false">
         <span class="player__art-letter" id="player-art-letter">М</span>
         <img class="player__art-img" id="player-art-img" alt="" decoding="async" hidden>
-      </div>
+      </button>
 
       <div class="player__meta">
         <div class="player__title" id="player-title">—</div>
@@ -80,11 +107,39 @@
           </svg>
         </button>
       </div>
+
+      <div class="player__timeline">
+        <span class="player__time" id="time-current">0:00</span>
+        <div class="player__seek">
+          <input type="range" id="seek" min="0" max="1000" step="1" value="0"
+                 aria-label="Позиция трека">
+        </div>
+        <span class="player__time" id="time-total">0:00</span>
+      </div>
+
+      <div class="player__volume">
+        <button class="player__mute" id="mute" type="button" aria-label="Выключить звук" aria-pressed="false">
+          <svg class="i-vol" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9.5h3.2L12 5.6v12.8L7.2 14.5H4z" fill="currentColor"/>
+            <path d="M15.5 8.6a5 5 0 0 1 0 6.8M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          <svg class="i-mute" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 9.5h3.2L12 5.6v12.8L7.2 14.5H4z" fill="currentColor"/>
+            <path d="m16 9 5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <input class="player__volume-range" id="volume" type="range"
+               min="0" max="1" step="0.01" value="1" aria-label="Громкость">
+      </div>
     </div>
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script type="module" src="js/app.js?v=20261029"></script>
+  <noscript>
+    <div class="noscript">Для прослушивания музыки включите JavaScript в браузере.</div>
+  </noscript>
+
+  <script type="module" src="js/app.js?v=20261030"></script>
 </body>
 </html>

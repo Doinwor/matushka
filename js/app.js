@@ -11,8 +11,8 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261029";
-import { Player } from "./player.js?v=20261029";
+} from "./data.js?v=20261030";
+import { Player } from "./player.js?v=20261030";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
 
@@ -91,27 +91,32 @@ function render() {
 /* ============================== Экран: главная ============================== */
 
 function renderHome() {
-  const { artists } = library;
+  const { artists, allTracks } = library;
   const isWave = player.mode === "wave" && Boolean(player.current);
   const live = isWave && player.isPlaying;
 
   const cards = artists
     .map((artist) => {
       const count = artist.tracks.length;
-      const meta = [artist.genre, `${count} ${pluralTracks(count)}`]
-        .filter(Boolean)
-        .join(" · ");
+      const meta = `${count} ${pluralTracks(count)} · ${minutesText(
+        artist.tracks.reduce((sum, track) => sum + Math.max(0, track.duration), 0),
+      )}`;
+      const genre = artist.genre
+        ? `<span class="artist-card__badge">${escapeHtml(artist.genre)}</span>`
+        : "";
 
       return `
         <a class="artist-card" href="#/artist/${encodeURIComponent(artist.id)}"
            data-artist-card
            data-search="${escapeHtml(`${artist.name} ${artist.genre}`.toLowerCase())}">
-          ${avatarHtml(artist)}
-          <span class="artist-card__info">
-            <span class="artist-card__name">${escapeHtml(artist.name)}</span>
-            <span class="artist-card__meta">${escapeHtml(meta)}</span>
+          <span class="artist-card__media" style="${gradientVars(artist.id)}">
+            <span class="artist-card__initials" aria-hidden="true">${escapeHtml(initialsOf(artist.name))}</span>
+            ${imageHtml("artist-card__img", artist.photo)}
+            ${genre}
+            <span class="artist-card__play" aria-hidden="true">${ICONS.play}</span>
           </span>
-          <span class="artist-card__arrow">${ICONS.chevron}</span>
+          <span class="artist-card__name">${escapeHtml(artist.name)}</span>
+          <span class="artist-card__meta">${escapeHtml(meta)}</span>
         </a>`;
     })
     .join("");
@@ -137,37 +142,76 @@ function renderHome() {
       ${noticeHtml()}
 
       <section class="hero${live ? " is-live" : ""}" id="hero">
-        <div class="hero__rings" aria-hidden="true"></div>
-
-        <span class="hero__eyebrow">
-          <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
-          <span data-wave-eyebrow>${live ? "Волна играет" : "Моя волна"}</span>
-        </span>
-
-        <h1 class="hero__title">Слушай <em>родное</em></h1>
-        <p class="hero__text">Случайные треки всех артистов. Один поток — без остановки.</p>
-
-        <button class="hero__btn" type="button" data-action="wave">
-          <span class="hero__btn-icon" aria-hidden="true">
-            <span class="i-play">${ICONS.play}</span>
-            <span class="i-pause">${ICONS.pause}</span>
+        <div class="hero__content">
+          <span class="hero__eyebrow">
+            <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
+            <span data-wave-eyebrow>${live ? "Волна играет" : "Моя волна"}</span>
           </span>
-          <span data-wave-label>${isWave ? (player.isPlaying ? "Пауза" : "Продолжить") : "Включить волну"}</span>
-        </button>
 
-        <p class="hero__now" id="wave-now"></p>
+          <h1 class="hero__title">Слушай <em>родное</em></h1>
+          <p class="hero__text">Случайные треки всех артистов. Один поток — без остановки.</p>
+
+          <div class="hero__actions">
+            <button class="hero__btn" type="button" data-action="wave">
+              <span class="hero__btn-icon" aria-hidden="true">
+                <span class="i-play">${ICONS.play}</span>
+                <span class="i-pause">${ICONS.pause}</span>
+              </span>
+              <span data-wave-label>${isWave ? (player.isPlaying ? "Пауза" : "Продолжить") : "Включить волну"}</span>
+            </button>
+            <span class="hero__hint">${allTracks.length ? "Без повторов подряд" : "Скоро здесь будет музыка"}</span>
+          </div>
+
+          <div class="hero__stats">
+            ${statHtml(artists.length, pluralArtists(artists.length))}
+            ${statHtml(allTracks.length, pluralTracks(allTracks.length))}
+            ${statHtml(
+              minutesText(allTracks.reduce((sum, track) => sum + Math.max(0, track.duration), 0)),
+              "звучания",
+            )}
+          </div>
+
+          <p class="hero__now" id="wave-now"></p>
+        </div>
+
+        ${collageHtml(artists)}
       </section>
 
       <section class="section">
         <div class="section__head">
-          <h2>Артисты</h2>
-          <span class="count">${artists.length}</span>
+          <div class="section__title">
+            <h2>Артисты</h2>
+            <span class="count">${artists.length}</span>
+          </div>
         </div>
         ${artistsBlock}
       </section>
     </div>`;
 
   updateHero();
+}
+
+function statHtml(value, label) {
+  return `<span class="hero__stat"><strong>${escapeHtml(String(value))}</strong><span>${escapeHtml(label)}</span></span>`;
+}
+
+/** Коллаж из фотографий артистов в шапке главной. */
+function collageHtml(artists) {
+  const shots = artists.filter((artist) => artist.photo).slice(0, 4);
+  if (!shots.length) return "";
+
+  return `
+    <div class="hero__collage" aria-hidden="true">
+      ${shots
+        .map(
+          (artist) => `
+        <span class="hero__shot" style="${gradientVars(artist.id)}">
+          <img src="${escapeHtml(artist.photo)}" alt="" decoding="async"
+               fetchpriority="high" onerror="this.remove()">
+        </span>`,
+        )
+        .join("")}
+    </div>`;
 }
 
 /* ============================== Экран: артист ============================== */
@@ -180,43 +224,57 @@ function renderArtist(id) {
   }
 
   const count = artist.tracks.length;
-  const meta = [
-    artist.genre,
-    count ? `${count} ${pluralTracks(count)}` : "нет треков",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const seconds = artist.tracks.reduce(
+    (sum, track) => sum + Math.max(0, track.duration),
+    0,
+  );
 
   const rows = artist.tracks
-    .map((track) => trackRow(track, artist))
+    .map((track, index) => trackRow(track, artist, index))
     .join("");
+
+  const chips = [
+    artist.genre ? `<span class="chip chip--accent">${escapeHtml(artist.genre)}</span>` : "",
+    `<span class="chip">${count} ${pluralTracks(count)}</span>`,
+    count ? `<span class="chip">${minutesText(seconds)}</span>` : "",
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const photoStyle = artist.photo
+    ? `background-image:${cssUrl(artist.photo)}`
+    : "";
 
   view.innerHTML = `
     <div class="screen">
       <a class="back" href="#/">${ICONS.arrowLeft}<span>Все артисты</span></a>
 
       <section class="artist-head" style="${gradientVars(artist.id)}">
-        <div class="artist-head__top">
-          ${avatarHtml(artist)}
-          <div class="artist-head__info">
-            <h1 class="artist-head__name">${escapeHtml(artist.name)}</h1>
-            <div class="artist-head__meta">${escapeHtml(meta)}</div>
+        <div class="artist-head__bg" aria-hidden="true" style="${photoStyle}"></div>
+
+        <div class="artist-head__inner">
+          <div class="artist-head__top">
+            ${avatarHtml(artist)}
+            <div class="artist-head__info">
+              <h1 class="artist-head__name">${escapeHtml(artist.name)}</h1>
+              <div class="artist-head__chips">${chips}</div>
+            </div>
           </div>
-        </div>
 
-        ${artist.bio ? `<p class="artist-head__bio">${escapeHtml(artist.bio)}</p>` : ""}
+          ${artist.bio ? `<p class="artist-head__bio">${escapeHtml(artist.bio)}</p>` : ""}
 
-        <div class="artist-actions">
-          <button class="btn btn--primary" type="button"
-                  data-action="play-artist" data-artist="${escapeHtml(artist.id)}"
-                  ${count ? "" : "disabled"}>
-            ${ICONS.play}<span>Слушать всё</span>
-          </button>
-          <button class="btn btn--ghost" type="button"
-                  data-action="shuffle-artist" data-artist="${escapeHtml(artist.id)}"
-                  ${count ? "" : "disabled"}>
-            ${ICONS.shuffle}<span>Вперемешку</span>
-          </button>
+          <div class="artist-actions">
+            <button class="btn btn--primary" type="button"
+                    data-action="play-artist" data-artist="${escapeHtml(artist.id)}"
+                    ${count ? "" : "disabled"}>
+              ${ICONS.play}<span>Слушать всё</span>
+            </button>
+            <button class="btn btn--ghost" type="button"
+                    data-action="shuffle-artist" data-artist="${escapeHtml(artist.id)}"
+                    ${count ? "" : "disabled"}>
+              ${ICONS.shuffle}<span>Вперемешку</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -227,7 +285,12 @@ function renderArtist(id) {
 
       ${
         count
-          ? `<div class="tracks">${rows}</div>`
+          ? `<div class="tracks">
+               <div class="tracks__labels" aria-hidden="true">
+                 <span>№</span><span></span><span>Трек</span><span>Альбом</span><span>Время</span>
+               </div>
+               ${rows}
+             </div>`
           : `<div class="state-card"><p>У артиста пока нет треков. Добавь их в
                <code>data/library.json</code>.</p></div>`
       }
@@ -256,13 +319,20 @@ function noticeHtml() {
     </section>`;
 }
 
-function trackRow(track, artist) {
+function trackRow(track, artist, index) {
   const sub = track.album || (track.year ? String(track.year) : "Сингл");
+  const album = track.album || "—";
 
   return `
     <button class="track" type="button"
             data-track-id="${escapeHtml(track.id)}"
-            data-artist-id="${escapeHtml(artist.id)}">
+            data-artist-id="${escapeHtml(artist.id)}"
+            aria-label="Играть: ${escapeHtml(track.title)} — ${escapeHtml(artist.name)}">
+      <span class="track__index" aria-hidden="true">
+        <span class="track__num">${String(index + 1).padStart(2, "0")}</span>
+        <span class="track__play">${ICONS.play}</span>
+        <span class="track__eq"><span class="eq"><span></span><span></span><span></span></span></span>
+      </span>
       <span class="track__cover" style="${gradientVars(track.id)}">
         <span class="track__cover-letter" aria-hidden="true">${escapeHtml(initialsOf(track.title))}</span>
         ${imageHtml("track__cover-img", track.cover)}
@@ -274,6 +344,7 @@ function trackRow(track, artist) {
         <span class="track__title">${escapeHtml(track.title)}</span>
         <span class="track__sub">${escapeHtml(sub)}</span>
       </span>
+      <span class="track__album">${escapeHtml(album)}</span>
       <span class="track__dur">${formatTime(track.duration)}</span>
     </button>`;
 }
@@ -295,6 +366,10 @@ function imageHtml(className, src) {
   if (!src) return "";
   return `<img class="${className}" src="${escapeHtml(src)}" alt=""
                loading="lazy" decoding="async" onerror="this.remove()">`;
+}
+
+function cssUrl(path) {
+  return `url('${String(path).replaceAll("'", "%27")}')`;
 }
 
 /* ============================== Плеер и «Волна» ============================== */
@@ -467,4 +542,33 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => {
     toastEl.classList.remove("is-visible");
   }, 3200);
+}
+
+/* ============================== Текст ============================== */
+
+function pluralArtists(n) {
+  return pluralRu(n, "артист", "артиста", "артистов");
+}
+
+function pluralRu(n, one, few, many) {
+  const count = Math.abs(Number(n) || 0) % 100;
+  const last = count % 10;
+  if (count > 10 && count < 20) return many;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
+}
+
+/** 0 → «—», 90 → «2 мин», 5400 → «1 ч 30 мин». */
+function minutesText(seconds) {
+  const total = Math.max(0, Math.round(Number(seconds) || 0));
+  if (total <= 0) return "—";
+  if (total < 60) return `${total} сек`;
+
+  const minutes = Math.round(total / 60);
+  if (minutes < 60) return `${minutes} мин`;
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
 }
