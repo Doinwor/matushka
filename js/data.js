@@ -37,11 +37,13 @@ function normalize(raw) {
     noticeText: rawSite.noticeText ? String(rawSite.noticeText) : "",
   };
 
+  // Скрытые в админке артисты и треки остаются в data/library.json,
+  // но на сайт не попадают.
   const artists = (Array.isArray(raw?.artists) ? raw.artists : [])
-    .filter((a) => a && a.id && a.name)
+    .filter((a) => a && a.id && a.name && !a.hidden)
     .map((a) => {
       const tracks = (Array.isArray(a.tracks) ? a.tracks : [])
-        .filter((t) => t && t.id && t.title && t.src)
+        .filter((t) => t && t.id && t.title && t.src && !t.hidden)
         .map((t) => ({
           ...t,
           id: String(t.id),
@@ -52,6 +54,7 @@ function normalize(raw) {
           duration: Number(t.duration) || 0,
           year: t.year ?? null,
           cover: t.cover ? String(t.cover) : null,
+          hidden: Boolean(t.hidden),
         }));
 
       return {
@@ -61,6 +64,7 @@ function normalize(raw) {
         genre: a.genre || "",
         bio: a.bio || "",
         photo: a.photo ? String(a.photo) : null,
+        hidden: Boolean(a.hidden),
         tracks,
       };
     });

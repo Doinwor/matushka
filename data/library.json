@@ -4,113 +4,124 @@
     "title": "Матушка",
     "tagline": "Русская музыка рядом",
     "noticeEnabled": true,
-    "noticeTitle": "Постепенно выгружаем новых артистов",
-    "noticeText": "В течении 30.10.2026 добавим больше артистов и расширим функционал."
+    "noticeTitle": "Новый альбом уже здесь",
+    "noticeText": "Слушайте свежие треки и включайте мою волну — музыка подбирается сама."
   },
   "artists": [
     {
-      "id": "shamag",
-      "name": "Шаман",
-      "genre": "Поп",
-      "bio": "Российский певец, композитор и автор песен. Заслуженный артист Российской Федерации. Представитель России на конкурсе песни Интервидение-2025. В 2013 году Дронов выступал на шоу «Фактор А», а в 2014 году - на российской версии шоу «Голос».",
-      "photo": "img/artists/shamag.jpg",
+      "id": "berezovyi-svet",
+      "name": "Берёзовый свет",
+      "genre": "Фолк",
+      "bio": "Тёплый фолк о деревне, реке и тишине. Живые струнные, мягкий голос и звуки утреннего леса.",
+      "photo": null,
       "tracks": [
         {
-          "id": "shamag-01",
-          "title": "Россия Мама",
-          "src": "audio/shamag/shamag-01.mp3",
-          "duration": 194,
+          "id": "bs-01",
+          "title": "Утренний туман",
+          "album": "Дом у реки",
+          "src": "audio/demo/berezovyi-svet.wav",
+          "duration": 12,
           "year": 2026,
-          "cover": "img/covers/shamag-01.jpg"
+          "cover": null
         },
         {
-          "id": "shamag-02",
-          "title": "Я РУССКИЙ",
-          "src": "audio/shamag/shamag-02.mp3",
-          "duration": 210,
-          "year": 2022,
-          "cover": "img/covers/shamag-02.jpg"
-        }
-      ]
-    },
-    {
-      "id": "prezidentskiy-orkestr-rossiyskoy-federatsi",
-      "name": "Президентский оркестр Российской Федерации",
-      "bio": "Президентский оркестр Российской Федерации — уникальный государственный музыкальный коллектив высшей категории, главный оркестр страны, обеспечивающий музыкальное сопровождение официальных мероприятий общегосударственного значения. Коллектив объединяет в себе симфонический, духовой и эстрадно-симфонический составы, что позволяет ему исполнять музыку любых жанров: от строгой классики и военных маршей до джаза, советской эстрады и мирового рока. Оркестр ведет активную концертную и гастрольную деятельность, выступая на главных сценах России и мира.",
-      "photo": "img/artists/prezidentskiy-orkestr-rossiyskoy-federatsi.jpg",
-      "tracks": [
-        {
-          "id": "prezidentskiy-orkestr-rossiyskoy-federatsi-01",
-          "title": "Гимн Российской Федерации",
-          "src": "audio/prezidentskiy-orkestr-rossiyskoy-federatsi/prezidentskiy-orkestr-rossiyskoy-federatsi-01.mp3",
-          "duration": 213,
+          "id": "bs-02",
+          "title": "Река-матушка",
+          "album": "Дом у реки",
+          "src": "audio/demo/berezovyi-svet.wav",
+          "duration": 12,
           "year": 2026,
-          "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-01.jpg",
-          "hidden": true
-        }
-      ]
-    },
-    {
-      "id": "oleg-gazmanov",
-      "name": "Олег Газманов",
-      "bio": "Олег Газманов — легенда отечественной эстрады, Народный артист России, певец, композитор и поэт. Его творчество уникально сочетает в себе энергичный поп-рок, душевную лирику и масштабные патриотические песни.",
-      "photo": "img/artists/oleg-gazmanov.jpg",
-      "tracks": [
-        {
-          "id": "oleg-gazmanov-01",
-          "title": "Офицеры",
-          "src": "audio/oleg-gazmanov/oleg-gazmanov-01.mp3",
-          "duration": 319,
-          "year": 1991,
-          "cover": "img/covers/oleg-gazmanov-01.jpg"
+          "cover": null
         },
         {
-          "id": "oleg-gazmanov-02",
-          "title": "Бессмертный полк",
-          "src": "audio/oleg-gazmanov/oleg-gazmanov-02.mp3",
-          "duration": 153,
-          "year": 2018,
-          "cover": "img/covers/oleg-gazmanov-02.jpg"
+          "id": "bs-03",
+          "title": "Поле зовёт",
+          "album": "Дом у реки",
+          "src": "audio/demo/berezovyi-svet.wav",
+          "duration": 12,
+          "year": 2026,
+          "cover": null
         },
         {
-          "id": "oleg-gazmanov-03",
-          "title": "Вперед Россия",
-          "src": "audio/oleg-gazmanov/oleg-gazmanov-03.mp3",
-          "duration": 198,
-          "year": 2015,
-          "cover": "img/covers/oleg-gazmanov-03.jpg"
+          "id": "bs-04",
+          "title": "Тихая заря",
+          "album": "Дом у реки",
+          "src": "audio/demo/berezovyi-svet.wav",
+          "duration": 12,
+          "year": 2026,
+          "cover": null
         }
       ]
     },
     {
-      "id": "sergey-trofimov",
-      "name": "Сергей Трофимов",
-      "bio": "Известный российский автор-исполнитель, поэт, композитор и Заслуженный артист РФ. Его творчество уникально сочетает в себе душевную городскую лирику, искреннюю бардовскую песню, элементы рока и благородный русский шансон.",
-      "photo": "img/artists/sergey-trofimov.jpg",
+      "id": "severnyi-veter",
+      "name": "Северный ветер",
+      "genre": "Рок",
+      "bio": "Гитарный рок о дороге, ветре и характере. Громко там, где нужно, и тихо там, где важно.",
+      "photo": null,
       "tracks": [
         {
-          "id": "sergey-trofimov-01",
-          "title": "Родина",
-          "src": "audio/sergey-trofimov/sergey-trofimov-01.mp3",
-          "duration": 224,
-          "year": 2006,
-          "cover": "img/covers/sergey-trofimov-01.jpg"
+          "id": "sv-01",
+          "title": "На краю",
+          "album": "Против ветра",
+          "src": "audio/demo/severnyi-veter.wav",
+          "duration": 12,
+          "year": 2025,
+          "cover": null
+        },
+        {
+          "id": "sv-02",
+          "title": "Вольная",
+          "album": "Против ветра",
+          "src": "audio/demo/severnyi-veter.wav",
+          "duration": 12,
+          "year": 2025,
+          "cover": null
+        },
+        {
+          "id": "sv-03",
+          "title": "Огонь в груди",
+          "album": "Против ветра",
+          "src": "audio/demo/severnyi-veter.wav",
+          "duration": 12,
+          "year": 2025,
+          "cover": null
         }
       ]
     },
     {
-      "id": "tatyana-kurtukova",
-      "name": "Татьяна Куртукова",
-      "bio": "является ярким представителем новой волны русской фолк-музыки, объединяя в своем творчестве аутентичные мотивы и современный поп-саунд. Широкую известность певице принес суперхит «Матушка», а также такие композиции, как «Одного» и «Ромашка-Василёк».",
-      "photo": "img/artists/tatyana-kurtukova.jpeg",
+      "id": "anna-vetrova",
+      "name": "Анна Ветрова",
+      "genre": "Этно-поп",
+      "bio": "Современный поп с народными мотивами: чистый вокал, живые барабаны и мелодии, которые остаются с тобой.",
+      "photo": null,
       "tracks": [
         {
-          "id": "tatyana-kurtukova-01",
-          "title": "Матушка",
-          "src": "audio/tatyana-kurtukova/tatyana-kurtukova-01.mp3",
-          "duration": 173,
-          "year": 2022,
-          "cover": "img/covers/tatyana-kurtukova-01.jpg"
+          "id": "av-01",
+          "title": "Родная",
+          "album": "Родная",
+          "src": "audio/demo/anna-vetrova.wav",
+          "duration": 12,
+          "year": 2026,
+          "cover": null
+        },
+        {
+          "id": "av-02",
+          "title": "Песня о доме",
+          "album": "Родная",
+          "src": "audio/demo/anna-vetrova.wav",
+          "duration": 12,
+          "year": 2026,
+          "cover": null
+        },
+        {
+          "id": "av-03",
+          "title": "Белый плат",
+          "album": "Родная",
+          "src": "audio/demo/anna-vetrova.wav",
+          "duration": 12,
+          "year": 2026,
+          "cover": null
         }
       ]
     }
