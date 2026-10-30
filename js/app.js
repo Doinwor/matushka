@@ -134,6 +134,8 @@ function renderHome() {
 
   view.innerHTML = `
     <div class="screen">
+      ${noticeHtml()}
+
       <section class="hero${live ? " is-live" : ""}" id="hero">
         <div class="hero__rings" aria-hidden="true"></div>
 
@@ -230,6 +232,28 @@ function renderArtist(id) {
                <code>data/library.json</code>.</p></div>`
       }
     </div>`;
+}
+
+/**
+ * Редактируемый блок на главной: заголовок и текст меняются из программы «Матушка».
+ * Пустой или выключенный блок на странице не показывается.
+ */
+function noticeHtml() {
+  const site = library.site || {};
+  if (site.noticeEnabled === false) return "";
+
+  const title = String(site.noticeTitle || "").trim();
+  const text = String(site.noticeText || "").trim();
+  if (!title && !text) return "";
+
+  return `
+    <section class="notice">
+      <span class="notice__flag" aria-hidden="true"></span>
+      <div class="notice__body">
+        ${title ? `<h2 class="notice__title">${escapeHtml(title)}</h2>` : ""}
+        ${text ? `<p class="notice__text">${escapeHtml(text)}</p>` : ""}
+      </div>
+    </section>`;
 }
 
 function trackRow(track, artist) {

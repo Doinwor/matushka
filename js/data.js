@@ -27,7 +27,15 @@ export async function loadLibrary() {
 }
 
 function normalize(raw) {
-  const site = raw && typeof raw.site === "object" && raw.site ? raw.site : {};
+  const rawSite = raw && typeof raw.site === "object" && raw.site ? raw.site : {};
+
+  const site = {
+    title: rawSite.title ? String(rawSite.title) : "",
+    tagline: rawSite.tagline ? String(rawSite.tagline) : "",
+    noticeEnabled: rawSite.noticeEnabled !== false,
+    noticeTitle: rawSite.noticeTitle ? String(rawSite.noticeTitle) : "",
+    noticeText: rawSite.noticeText ? String(rawSite.noticeText) : "",
+  };
 
   const artists = (Array.isArray(raw?.artists) ? raw.artists : [])
     .filter((a) => a && a.id && a.name)

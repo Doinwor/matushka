@@ -462,6 +462,46 @@ body:not(.is-playing) .eq span {
   font-weight: 600;
 }
 
+/* ---------- Блок объявления на главной ---------- */
+
+.notice {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  background: linear-gradient(150deg, rgba(79, 126, 232, 0.12), rgba(226, 73, 63, 0.1));
+}
+
+.notice__flag {
+  flex: 0 0 auto;
+  width: 4px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--cream) 0 33.33%, var(--blue) 33.33% 66.66%, var(--red) 66.66% 100%);
+}
+
+.notice__body {
+  min-width: 0;
+}
+
+.notice__title {
+  margin: 0 0 5px;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--cream);
+}
+
+.notice__text {
+  margin: 0;
+  color: #c3c7cd;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
 /* ---------- Секции и поиск ---------- */
 
 .section {
