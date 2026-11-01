@@ -46,6 +46,27 @@
           "duration": 213,
           "year": 2026,
           "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-01.jpg"
+        },
+        {
+          "id": "prezidentskiy-orkestr-rossiyskoy-federatsi-02",
+          "title": "Боже, Царя храни!",
+          "src": "audio/prezidentskiy-orkestr-rossiyskoy-federatsi/prezidentskiy-orkestr-rossiyskoy-federatsi-02.mp3",
+          "duration": 115,
+          "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-02.jpg"
+        },
+        {
+          "id": "prezidentskiy-orkestr-rossiyskoy-federatsi-03",
+          "title": "Священная война",
+          "src": "audio/prezidentskiy-orkestr-rossiyskoy-federatsi/prezidentskiy-orkestr-rossiyskoy-federatsi-03.mp3",
+          "duration": 258,
+          "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-03.jpg"
+        },
+        {
+          "id": "prezidentskiy-orkestr-rossiyskoy-federatsi-04",
+          "title": "Смуглянка",
+          "src": "audio/prezidentskiy-orkestr-rossiyskoy-federatsi/prezidentskiy-orkestr-rossiyskoy-federatsi-04.mp3",
+          "duration": 210,
+          "cover": "img/covers/prezidentskiy-orkestr-rossiyskoy-federatsi-04.jpg"
         }
       ]
     },
@@ -158,6 +179,59 @@
           "duration": 315,
           "year": 2017,
           "cover": "img/covers/dkabr-01.jpg"
+        }
+      ]
+    },
+    {
+      "id": "lev-leshchenko",
+      "name": "Лев Лещенко",
+      "genre": "Эстрада",
+      "bio": "Советский и российский эстрадный певец, Народный артист РСФСР. Один из самых узнаваемых голосов отечественной эстрады; «День Победы» в его исполнении стала по-настоящему народной песней.",
+      "photo": "img/artists/lev-leshchenko.jpg",
+      "tracks": [
+        {
+          "id": "lev-leshchenko-01",
+          "title": "День Победы",
+          "src": "audio/lev-leshchenko/lev-leshchenko-01.mp3",
+          "duration": 234,
+          "cover": "img/covers/lev-leshchenko-01.jpg"
+        },
+        {
+          "id": "lev-leshchenko-02",
+          "title": "Родная земля",
+          "src": "audio/lev-leshchenko/lev-leshchenko-02.mp3",
+          "duration": 273,
+          "cover": "img/covers/lev-leshchenko-02.jpg"
+        }
+      ]
+    },
+    {
+      "id": "lyube",
+      "name": "Любэ",
+      "genre": "Рок",
+      "bio": "Советская и российская рок-группа, основанная Николаем Расторгуевым в 1989 году. Соединяет рок, эстраду и народные мотивы; «Конь», «Берёзы» и «Комбат» — её самые известные песни.",
+      "photo": "img/artists/lyube.jpg",
+      "tracks": [
+        {
+          "id": "lyube-01",
+          "title": "Берёзы",
+          "src": "audio/lyube/lyube-01.mp3",
+          "duration": 172,
+          "cover": "img/covers/lyube-01.jpg"
+        },
+        {
+          "id": "lyube-02",
+          "title": "Комбат",
+          "src": "audio/lyube/lyube-02.mp3",
+          "duration": 305,
+          "cover": "img/covers/lyube-02.jpg"
+        },
+        {
+          "id": "lyube-03",
+          "title": "Конь",
+          "src": "audio/lyube/lyube-03.mp3",
+          "duration": 218,
+          "cover": "img/covers/lyube-03.jpg"
         }
       ]
     }
