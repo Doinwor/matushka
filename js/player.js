@@ -1,13 +1,74 @@
 /**
  * Плеер «Матушка».
  * Живёт вне экранов: переходы по сайту не прерывают музыку.
- * На телефоне открывается на весь экран, на ПК — плавающей панелью.
+ * На телефоне открывается на весь экран, на ПК — плавающей панелью
+ * (по клику на обложку — карточкой по центру).
  */
 
-import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261030";
+import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261102";
 
 const VOLUME_KEY = "matushka:volume";
+const LAST_KEY = "matushka:last";
 const MOBILE_QUERY = "(max-width: 899px)";
+
+function readJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* приватный режим */
+  }
+}
+
+/**
+ * Перемешивает треки так, чтобы один артист не шёл несколько раз подряд.
+ * `recentIds` — что недавно звучало, `blockedArtists` — кого реже показывать.
+ */
+export function smartShuffle(tracks, { recentIds = [], blockedArtists = new Set() } = {}) {
+  if (!tracks.length) return [];
+
+  const fresh = tracks.filter((track) => !recentIds.includes(track.id));
+  const base = fresh.length >= Math.min(6, tracks.length) ? fresh : tracks.slice();
+  const allowed = blockedArtists.size
+    ? base.filter((track) => !blockedArtists.has(track.artistId))
+    : base;
+  const pool = allowed.length ? allowed : base;
+
+  const byArtist = new Map();
+  for (const track of pool) {
+    const key = track.artistId || track.id;
+    if (!byArtist.has(key)) byArtist.set(key, []);
+    byArtist.get(key).push(track);
+  }
+
+  const buckets = shuffle([...byArtist.values()].map((list) => shuffle(list)));
+  const result = [];
+  const recentArtists = [];
+
+  while (result.length < pool.length) {
+    const available = buckets.filter((list) => list.length);
+    if (!available.length) break;
+
+    const spread = available.filter((list) => !recentArtists.includes(list[0].artistId));
+    const source = spread.length ? spread : available;
+    const bucket = source[Math.floor(Math.random() * source.length)];
+    const track = bucket.shift();
+
+    result.push(track);
+    recentArtists.push(track.artistId);
+    if (recentArtists.length > 2) recentArtists.shift();
+  }
+
+  return result;
+}
 
 export class Player {
   constructor(root) {
@@ -19,8 +80,23 @@ export class Player {
     this.index = -1;
     this.mode = null; // "wave" | "artist"
     this.pool = null; // все треки для бесконечной волны
+
+    // Артисты, которых пользователь попросил реже показывать в «Волне».
+    this.disliked = new Set();
+
     this.onStateChange = null;
     this.onError = null;
+    this.onQueueChange = null;
+    this.onToggleFavorite = null;
+    this.onToggleQueue = null;
+
+    this.startAt = 0;
+    this.lastPersist = 0;
+    this.lastPositionSync = 0;
+    this.preloadedTrackId = null;
+    this.preloader = null;
+    this.retried = new Set();
+    this.scrubbing = false;
 
     this.ui = {
       art: root.querySelector("#player-art"),
@@ -38,12 +114,19 @@ export class Player {
       timeTotal: root.querySelector("#time-total"),
       volume: root.querySelector("#volume"),
       mute: root.querySelector("#mute"),
+      fav: root.querySelector("#player-fav"),
+      queue: root.querySelector("#queue-btn"),
     };
 
     this.#bindUi();
     this.#bindAudio();
     this.#bindMediaSession();
     this.#restoreVolume();
+
+    document.addEventListener("pagehide", () => this.#saveState());
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") this.#saveState();
+    });
   }
 
   get current() {
@@ -61,11 +144,14 @@ export class Player {
   /* ---------- Публичное управление ---------- */
 
   /** Бесконечная «Моя волна»: перемешивает все треки сайта. */
-  startWave(tracks) {
+  startWave(tracks, { recentIds = [] } = {}) {
     if (!tracks.length) return false;
     this.pool = tracks.slice();
     const lastId = this.current?.id;
-    const next = shuffle(this.pool);
+    const next = smartShuffle(this.pool, {
+      recentIds,
+      blockedArtists: this.disliked,
+    });
     // Не начинаем новый круг с того же трека, что только что играл.
     if (next.length > 1 && next[0].id === lastId) {
       [next[0], next[1]] = [next[1], next[0]];
@@ -81,9 +167,11 @@ export class Player {
   playArtist(artist, { shuffled = false, startId = null } = {}) {
     if (!artist || !artist.tracks.length) return false;
     this.pool = null;
-    this.queue = shuffled ? shuffle(artist.tracks) : artist.tracks.slice();
+    this.queue = shuffled
+      ? smartShuffle(artist.tracks)
+      : artist.tracks.slice();
     this.index = startId
-      ? Math.max(0, this.queue.findIndex((t) => t.id === startId))
+      ? Math.max(0, this.queue.findIndex((track) => track.id === startId))
       : 0;
     this.mode = "artist";
     this.#load(true);
@@ -98,6 +186,38 @@ export class Player {
       return true;
     }
     return this.playArtist(artist, { startId: track.id });
+  }
+
+  /** Восстанавливает последний трек и позицию после перезагрузки. */
+  restore(library) {
+    const saved = readJSON(LAST_KEY, null);
+    if (!saved || !saved.trackId || !library) return false;
+
+    const artist = library.artists.find((item) => item.id === saved.artistId);
+    if (!artist) return false;
+    const track = artist.tracks.find((item) => item.id === saved.trackId);
+    if (!track) return false;
+
+    const time = Math.max(0, Number(saved.time) || 0);
+
+    if (saved.mode === "wave" && library.allTracks?.length) {
+      const rest = smartShuffle(
+        library.allTracks.filter((item) => item.id !== track.id),
+        { recentIds: [track.id] },
+      );
+      this.pool = library.allTracks.slice();
+      this.queue = [track, ...rest];
+      this.index = 0;
+      this.mode = "wave";
+    } else {
+      this.pool = null;
+      this.queue = artist.tracks.slice();
+      this.index = Math.max(0, artist.tracks.findIndex((item) => item.id === track.id));
+      this.mode = "artist";
+    }
+
+    this.#load(false, time);
+    return true;
   }
 
   toggle() {
@@ -146,11 +266,84 @@ export class Player {
     this.#load(true);
   }
 
+  /** Переход к треку из очереди. */
+  jumpTo(target) {
+    const index = Number(target);
+    if (!Number.isInteger(index) || index < 0 || index >= this.queue.length) return;
+    this.index = index;
+    this.#load(true);
+  }
+
+  /** Убирает трек из очереди, не ломая текущий. */
+  removeAt(target) {
+    const index = Number(target);
+    if (!Number.isInteger(index) || index < 0 || index >= this.queue.length) return;
+
+    const wasCurrent = index === this.index;
+    const wasPlaying = this.isPlaying;
+    this.queue.splice(index, 1);
+
+    if (!this.queue.length) {
+      this.audio.pause();
+      this.index = -1;
+      this.#emitQueue();
+      return;
+    }
+
+    if (index < this.index) {
+      this.index -= 1;
+    } else if (wasCurrent) {
+      this.index = Math.min(this.index, this.queue.length - 1);
+      this.#load(wasPlaying);
+    }
+
+    this.#emitQueue();
+  }
+
+  /** «Не это»: артист реже появляется в волне, играет следующий трек. */
+  dislike() {
+    const track = this.current;
+    if (!track) return false;
+    this.disliked.add(track.artistId);
+    this.next();
+    return true;
+  }
+
+  seekBy(seconds) {
+    const duration = this.audio.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+    this.audio.currentTime = Math.min(
+      duration,
+      Math.max(0, this.audio.currentTime + seconds),
+    );
+  }
+
+  toggleMute() {
+    this.audio.muted = !this.audio.muted;
+    this.#syncMute();
+    this.#saveVolume(this.audio.volume);
+  }
+
+  setFavorite(active) {
+    this.ui.fav?.setAttribute("aria-pressed", String(Boolean(active)));
+  }
+
+  persist() {
+    this.#saveState();
+  }
+
   /* ---------- Внутреннее ---------- */
 
   #nextWaveRound() {
     const lastId = this.current?.id;
-    const next = shuffle(this.pool);
+    const recentIds = [
+      ...this.queue.slice(-5).map((track) => track.id),
+      ...(lastId ? [lastId] : []),
+    ];
+    const next = smartShuffle(this.pool, {
+      recentIds,
+      blockedArtists: this.disliked,
+    });
     if (next.length > 1 && next[0].id === lastId) {
       [next[0], next[1]] = [next[1], next[0]];
     }
@@ -158,15 +351,20 @@ export class Player {
     this.index = 0;
   }
 
-  #load(autoplay) {
+  #load(autoplay, startAt = 0) {
     const track = this.current;
     if (!track) return;
+
+    this.#clearPreload();
+    this.startAt = Math.max(0, Number(startAt) || 0);
 
     this.audio.src = track.src;
     this.audio.load();
     this.#renderTrack(track);
-    this.#setFill(0);
-    this.#setTime(0, track.duration || 0);
+    const total = Number(track.duration) || 0;
+    this.#setFill(total > 0 ? (this.startAt / total) * 100 : 0);
+    this.#setTime(this.startAt, total);
+    this.#emitQueue();
 
     if (autoplay) this.#play();
     this.#emit();
@@ -199,8 +397,12 @@ export class Player {
         artImg.hidden = true;
       };
       artImg.src = track.cover;
-      this.ui.backdrop.style.backgroundImage = `url("${String(track.cover).replaceAll('"', "%22")}")`;
+      this.ui.backdrop.style.setProperty(
+        "--art",
+        `url("${String(track.cover).replaceAll('"', "%22")}")`,
+      );
     } else {
+      this.ui.backdrop.style.setProperty("--art", "none");
       this.ui.backdrop.style.backgroundImage = "none";
     }
 
@@ -209,7 +411,7 @@ export class Player {
     artist.textContent = track.artistName;
     seek.value = "0";
     seek.setAttribute("aria-valuetext", `${track.title}, ${track.artistName}`);
-    timeCurrent.textContent = "0:00";
+    timeCurrent.textContent = formatTime(this.startAt || 0);
     timeTotal.textContent = formatTime(track.duration);
 
     toggle.setAttribute("aria-label", "Играть");
@@ -227,19 +429,35 @@ export class Player {
   }
 
   #bindUi() {
-    const { toggle, prev, next, seek, volume, mute, art, close, backdrop } = this.ui;
+    const { toggle, prev, next, seek, volume, mute, art, close, backdrop, fav, queue } = this.ui;
 
     toggle.addEventListener("click", () => this.toggle());
     prev.addEventListener("click", () => this.prev());
     next.addEventListener("click", () => this.next());
 
+    fav?.addEventListener("click", () => this.onToggleFavorite?.(this.current));
+    queue?.addEventListener("click", () => this.onToggleQueue?.());
+
     seek.addEventListener("input", () => {
       const duration = this.audio.duration;
       if (!Number.isFinite(duration) || duration <= 0) return;
-      this.audio.currentTime = (Number(seek.value) / 1000) * duration;
-      this.#setFill((Number(seek.value) / 1000) * 100);
-      this.#setTime(this.audio.currentTime, duration);
+      const target = (Number(seek.value) / 1000) * duration;
+      this.audio.currentTime = target;
+      this.#setFill((target / duration) * 100);
+      this.#setTime(target, duration);
+      this.#syncPositionState(true);
     });
+
+    // Пока палец/мышь держат ползунок, timeupdate не должен дёргать thumb.
+    seek.addEventListener("pointerdown", () => {
+      this.scrubbing = true;
+    });
+    const endScrub = () => {
+      this.scrubbing = false;
+    };
+    seek.addEventListener("change", endScrub);
+    window.addEventListener("pointerup", endScrub);
+    window.addEventListener("pointercancel", endScrub);
 
     volume.addEventListener("input", () => {
       const value = Math.min(1, Math.max(0, Number(volume.value) || 0));
@@ -250,10 +468,7 @@ export class Player {
       this.#saveVolume(value);
     });
 
-    mute.addEventListener("click", () => {
-      this.audio.muted = !this.audio.muted;
-      this.#syncMute();
-    });
+    mute.addEventListener("click", () => this.toggleMute());
 
     art.addEventListener("click", () => this.#toggleOpen());
     close.addEventListener("click", () => this.#close());
@@ -264,16 +479,6 @@ export class Player {
         this.#close();
       }
     });
-
-    const mobile = window.matchMedia(MOBILE_QUERY);
-    const onChange = () => {
-      if (!mobile.matches) this.#close();
-    };
-    if (typeof mobile.addEventListener === "function") {
-      mobile.addEventListener("change", onChange);
-    } else if (typeof mobile.addListener === "function") {
-      mobile.addListener(onChange);
-    }
   }
 
   #bindAudio() {
@@ -282,25 +487,76 @@ export class Player {
       if (!Number.isFinite(duration) || duration <= 0) return;
       this.#setFill((this.audio.currentTime / duration) * 100);
       this.#setTime(this.audio.currentTime, duration);
+      this.#syncPositionState();
+      this.#maybePersist();
+      if (this.audio.currentTime > 2) this.#preloadNext();
     });
 
     this.audio.addEventListener("loadedmetadata", () => {
-      this.#setFill(0);
-      if (Number.isFinite(this.audio.duration) && this.audio.duration > 0) {
-        this.#setTime(this.audio.currentTime, this.audio.duration);
+      const duration = this.audio.duration;
+
+      if (this.startAt > 0 && Number.isFinite(duration) && duration > 0) {
+        this.audio.currentTime = Math.min(this.startAt, Math.max(0, duration - 0.5));
+        this.startAt = 0;
       }
+
+      if (Number.isFinite(duration) && duration > 0) {
+        this.#setFill((this.audio.currentTime / duration) * 100);
+        this.#setTime(this.audio.currentTime, duration);
+      } else {
+        this.#setFill(0);
+      }
+      this.#syncPositionState(true);
       this.#emit();
     });
 
-    this.audio.addEventListener("play", () => this.#emit());
-    this.audio.addEventListener("pause", () => this.#emit());
+    this.audio.addEventListener("play", () => {
+      this.#emit();
+      this.#syncPositionState(true);
+    });
+    this.audio.addEventListener("pause", () => {
+      this.#emit();
+      this.#syncPositionState(true);
+      this.#saveState();
+    });
     this.audio.addEventListener("volumechange", () => this.#syncMute());
+    this.audio.addEventListener("seeked", () => {
+      const duration = this.audio.duration;
+      if (Number.isFinite(duration) && duration > 0) {
+        this.#setFill((this.audio.currentTime / duration) * 100);
+        this.#setTime(this.audio.currentTime, duration);
+      }
+      this.#syncPositionState(true);
+    });
 
     this.audio.addEventListener("ended", () => this.next({ auto: true }));
 
     this.audio.addEventListener("error", () => {
-      if (!this.current) return;
-      this.onError?.(`Не удалось загрузить трек «${this.current.title}»`);
+      const track = this.current;
+      if (!track) return;
+
+      const canRetry = this.queue.length > 1 && !this.retried.has(track.id);
+      if (canRetry) {
+        this.retried.add(track.id);
+        this.onError?.(`«${track.title}» не загрузился — пробуем ещё раз`);
+        window.setTimeout(() => {
+          if (this.current?.id !== track.id) return;
+          this.audio.src = track.src;
+          this.audio.load();
+          this.#play();
+        }, 1200);
+        return;
+      }
+
+      if (this.queue.length > 1) {
+        this.onError?.(`Не удалось загрузить «${track.title}» — включаю следующий`);
+        window.setTimeout(() => {
+          if (this.current?.id === track.id) this.next({ auto: true });
+        }, 800);
+        return;
+      }
+
+      this.onError?.(`Не удалось загрузить трек «${track.title}»`);
     });
   }
 
@@ -312,15 +568,8 @@ export class Player {
       pause: () => this.audio.pause(),
       previoustrack: () => this.prev(),
       nexttrack: () => this.next(),
-      seekbackward: () => {
-        this.audio.currentTime = Math.max(0, this.audio.currentTime - 10);
-      },
-      seekforward: () => {
-        this.audio.currentTime = Math.min(
-          this.audio.duration || 0,
-          this.audio.currentTime + 10,
-        );
-      },
+      seekbackward: () => this.seekBy(-10),
+      seekforward: () => this.seekBy(10),
       seekto: (details) => {
         if (Number.isFinite(details.seekTime)) {
           this.audio.currentTime = details.seekTime;
@@ -337,11 +586,71 @@ export class Player {
     }
   }
 
+  /** Прогресс на экране блокировки: без него нет перемотки в системном плеере. */
+  #syncPositionState(force = false) {
+    if (!("mediaSession" in navigator)) return;
+    if (typeof navigator.mediaSession.setPositionState !== "function") return;
+
+    const now = Date.now();
+    if (!force && now - this.lastPositionSync < 900) return;
+
+    const duration = this.audio.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+
+    this.lastPositionSync = now;
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: this.audio.playbackRate || 1,
+        position: Math.min(Math.max(this.audio.currentTime || 0, 0), duration),
+      });
+    } catch {
+      /* Safari иногда ругается на позицию 0 */
+    }
+  }
+
+  /* ---------- Предзагрузка следующего трека ---------- */
+
+  #preloadNext() {
+    const nextTrack = this.queue[this.index + 1];
+    if (!nextTrack || nextTrack.id === this.preloadedTrackId) return;
+
+    const connection = navigator.connection;
+    if (connection?.saveData) return;
+    if (connection?.effectiveType && /(^|-)2g$/.test(connection.effectiveType)) return;
+
+    this.#clearPreload();
+
+    try {
+      const element = new Audio();
+      element.preload = "auto";
+      element.muted = true;
+      element.src = nextTrack.src;
+      element.load();
+      this.preloader = element;
+      this.preloadedTrackId = nextTrack.id;
+    } catch {
+      /* предзагрузка — необязательная роскошь */
+    }
+  }
+
+  #clearPreload() {
+    if (this.preloader) {
+      try {
+        this.preloader.src = "";
+      } catch {
+        /* ignore */
+      }
+      this.preloader = null;
+    }
+    this.preloadedTrackId = null;
+  }
+
   /* ---------- Полноэкранный плеер ---------- */
 
   #toggleOpen() {
     if (!this.current) return;
-    if (!window.matchMedia(MOBILE_QUERY).matches) return;
 
     if (this.root.classList.contains("is-open")) {
       this.#close();
@@ -365,12 +674,8 @@ export class Player {
 
   #restoreVolume() {
     let value = 1;
-    try {
-      const saved = localStorage.getItem(VOLUME_KEY);
-      if (saved !== null) value = Number(saved);
-    } catch {
-      /* приватный режим */
-    }
+    const saved = readJSON(VOLUME_KEY, null);
+    if (typeof saved === "number") value = saved;
     if (!Number.isFinite(value)) value = 1;
     value = Math.min(1, Math.max(0, value));
 
@@ -382,11 +687,7 @@ export class Player {
   }
 
   #saveVolume(value) {
-    try {
-      localStorage.setItem(VOLUME_KEY, String(value));
-    } catch {
-      /* приватный режим */
-    }
+    writeJSON(VOLUME_KEY, value);
   }
 
   #setVolumeFill(value) {
@@ -404,6 +705,10 @@ export class Player {
   #setFill(percent) {
     const value = Math.max(0, Math.min(100, percent));
     this.ui.seek.style.setProperty("--p", `${value}%`);
+    if (!this.scrubbing) {
+      this.ui.seek.value = String(Math.round(value * 10));
+    }
+    this.ui.seek.setAttribute("aria-valuenow", String(Math.round(value)));
   }
 
   #setTime(current, total) {
@@ -411,10 +716,37 @@ export class Player {
     this.ui.timeTotal.textContent = formatTime(total);
   }
 
+  /* ---------- Сохранение позиции ---------- */
+
+  #maybePersist() {
+    if (Math.abs((this.audio.currentTime || 0) - this.lastPersist) < 5) return;
+    this.lastPersist = this.audio.currentTime || 0;
+    this.#saveState();
+  }
+
+  #saveState() {
+    const track = this.current;
+    if (!track) return;
+    writeJSON(LAST_KEY, {
+      trackId: track.id,
+      artistId: track.artistId,
+      mode: this.mode,
+      time: Math.max(0, Math.round(this.audio.currentTime || 0)),
+      savedAt: Date.now(),
+    });
+  }
+
+  #emitQueue() {
+    this.onQueueChange?.();
+  }
+
   #emit() {
     this.ui.toggle.setAttribute("aria-label", this.isPlaying ? "Пауза" : "Играть");
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = this.isPlaying ? "playing" : "paused";
+    }
     this.onStateChange?.(this.current);
   }
 }
 
-export { formatTime };
+export { formatTime, MOBILE_QUERY };

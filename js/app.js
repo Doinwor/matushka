@@ -1,7 +1,10 @@
 /**
  * Матушка — приложение.
- * Экраны: главная («Моя волна» + артисты) и страница артиста.
+ * Экраны: главная («Моя волна» + артисты + «Моё») и страница артиста.
  * Одна HTML-оболочка, поэтому музыка не прерывается при переходах.
+ *
+ * Данные по-прежнему берутся только из data/library.json — структура
+ * хранения не менялась. Избранное и позиция хранятся в localStorage.
  */
 
 import {
@@ -11,10 +14,12 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261030";
-import { Player } from "./player.js?v=20261030";
+} from "./data.js?v=20261102";
+import { Player } from "./player.js?v=20261102";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
+const FAV_KEY = "matushka:favorites";
+const RECENT_LIMIT = 12;
 
 const ICONS = {
   play: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.53.85l10-6.5a1 1 0 0 0 0-1.7l-10-6.5A1 1 0 0 0 8 5.5Z" fill="currentColor"/></svg>`,
@@ -23,36 +28,58 @@ const ICONS = {
   arrowLeft: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   chevron: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   search: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.6-3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  heart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2s-7.5-4.6-7.5-9.8A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.5 3c0 5.2-7.5 9.8-7.5 9.8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
+  queue: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  dislike: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m8.4 15.6 7.2-7.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
 };
 
 const view = document.getElementById("view");
 const topWave = document.getElementById("top-wave");
 const toastEl = document.getElementById("toast");
+const liveEl = document.getElementById("live");
 
 const player = new Player(document.getElementById("player"));
 
-let library = null;
+const state = {
+  library: null,
+  query: "",
+  genre: "",
+  favorites: loadFavorites(),
+  scroll: new Map(),
+  lastHash: "",
+  recent: [],
+};
+
 let toastTimer = 0;
+let searchTimer = 0;
+let firstRender = true;
 
 init();
 
 async function init() {
+  if (isIOS()) document.documentElement.classList.add("is-ios");
+
   player.onStateChange = onPlayerState;
   player.onError = showToast;
+  player.onQueueChange = renderQueue;
+  player.onToggleFavorite = () => toggleFavorite(player.current?.id);
+  player.onToggleQueue = () => toggleQueuePanel();
 
   window.addEventListener("hashchange", render);
   topWave.addEventListener("click", toggleWave);
   view.addEventListener("click", onViewClick);
   view.addEventListener("input", onViewInput);
   document.addEventListener("keydown", onKeydown);
+  bindQueuePanel();
 
   try {
-    library = await loadLibrary();
+    state.library = await loadLibrary();
   } catch (error) {
     renderError(error.message);
     return;
   }
 
+  player.restore(state.library);
   render();
 }
 
@@ -62,20 +89,29 @@ function currentRoute() {
   const raw = location.hash.replace(/^#/, "");
   if (!raw || raw === "/") return { name: "home" };
 
-  const artistMatch = raw.match(/^\/artist\/([^/]+)$/);
+  const [path, queryString] = raw.split("?");
+  const params = new URLSearchParams(queryString || "");
+
+  const artistMatch = path.match(/^\/artist\/([^/]+)$/);
   if (artistMatch) {
-    return { name: "artist", id: decodeURIComponent(artistMatch[1]) };
+    return {
+      name: "artist",
+      id: decodeURIComponent(artistMatch[1]),
+      trackId: params.get("track"),
+    };
   }
 
   return { name: "notFound" };
 }
 
 function render() {
-  if (!library) return;
+  if (!state.library) return;
+
+  state.scroll.set(state.lastHash || location.hash, window.scrollY);
 
   const route = currentRoute();
   if (route.name === "artist") {
-    renderArtist(route.id);
+    renderArtist(route.id, route.trackId);
   } else if (route.name === "home") {
     renderHome();
   } else {
@@ -85,15 +121,44 @@ function render() {
   syncActive();
   updateHero();
   updateDocumentTitle();
-  window.scrollTo(0, 0);
+  updatePlayerChrome();
+
+  const target = state.scroll.get(location.hash) ?? 0;
+  state.lastHash = location.hash;
+
+  if (!firstRender) focusHeading();
+  firstRender = false;
+
+  scrollToInstant(target);
+}
+
+function scrollToInstant(top) {
+  try {
+    window.scrollTo({ top, left: 0, behavior: "instant" });
+  } catch {
+    window.scrollTo(0, top);
+  }
+}
+
+function focusHeading() {
+  const heading = view.querySelector("h1");
+  if (!heading) return;
+  heading.setAttribute("tabindex", "-1");
+  heading.focus({ preventScroll: true });
 }
 
 /* ============================== Экран: главная ============================== */
 
 function renderHome() {
-  const { artists, allTracks } = library;
+  const { artists, allTracks } = state.library;
   const isWave = player.mode === "wave" && Boolean(player.current);
   const live = isWave && player.isPlaying;
+  const genres = [
+    ...new Set(artists.map((artist) => artist.genre).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "ru"));
+
+  // Выбранный жанр мог исчезнуть вместе с артистом — сбрасываем фильтр.
+  if (state.genre && !genres.includes(state.genre)) state.genre = "";
 
   const cards = artists
     .map((artist) => {
@@ -104,11 +169,15 @@ function renderHome() {
       const genre = artist.genre
         ? `<span class="artist-card__badge">${escapeHtml(artist.genre)}</span>`
         : "";
+      const haystack = `${artist.name} ${artist.genre} ${artist.tracks
+        .map((track) => track.title)
+        .join(" ")}`;
 
       return `
         <a class="artist-card" href="#/artist/${encodeURIComponent(artist.id)}"
            data-artist-card
-           data-search="${escapeHtml(`${artist.name} ${artist.genre}`.toLowerCase())}">
+           data-genre="${escapeHtml(artist.genre || "")}"
+           data-search="${escapeHtml(normalize(haystack))}">
           <span class="artist-card__media" style="${gradientVars(artist.id)}">
             <span class="artist-card__initials" aria-hidden="true">${escapeHtml(initialsOf(artist.name))}</span>
             ${imageHtml("artist-card__img", artist.photo)}
@@ -121,13 +190,29 @@ function renderHome() {
     })
     .join("");
 
+  const chips = genres.length > 1
+    ? `<div class="chips" id="genre-chips" role="group" aria-label="Жанры">
+         <button class="genre-chip${state.genre ? "" : " is-active"}" type="button" data-genre="">Все</button>
+         ${genres
+           .map(
+             (genre) => `
+           <button class="genre-chip${state.genre === genre ? " is-active" : ""}" type="button"
+                   data-genre="${escapeHtml(genre)}">${escapeHtml(genre)}</button>`,
+           )
+           .join("")}
+       </div>`
+    : "";
+
   const artistsBlock = artists.length
     ? `
       <label class="search">
         ${ICONS.search}
-        <input id="artist-search" type="search" placeholder="Найти артиста"
-               autocomplete="off" enterkeyhint="search" aria-label="Поиск по артистам">
+        <input id="artist-search" type="search" placeholder="Артист, трек или альбом"
+               autocomplete="off" enterkeyhint="search" aria-label="Поиск по артистам и трекам"
+               value="${escapeHtml(state.query)}">
       </label>
+      ${chips}
+      <div class="search-tracks" id="search-tracks" hidden></div>
       <div class="artists" id="artists-list">${cards}</div>
       <div class="no-results" id="search-empty" hidden>Никого не нашли. Попробуй другое имя.</div>`
     : `
@@ -159,6 +244,9 @@ function renderHome() {
               </span>
               <span data-wave-label>${isWave ? (player.isPlaying ? "Пауза" : "Продолжить") : "Включить волну"}</span>
             </button>
+            <button class="btn btn--ghost hero__dislike" type="button" data-action="dislike" hidden>
+              ${ICONS.dislike}<span>Не это</span>
+            </button>
             <span class="hero__hint">${allTracks.length ? "Без повторов подряд" : "Скоро здесь будет музыка"}</span>
           </div>
 
@@ -177,17 +265,30 @@ function renderHome() {
         ${collageHtml(artists)}
       </section>
 
+      <section class="section" id="favorites-section" hidden>
+        <div class="section__head">
+          <div class="section__title">
+            <h2>Моё</h2>
+            <span class="count" id="favorites-count">0</span>
+          </div>
+          <span class="section__note">Только на этом устройстве</span>
+        </div>
+        <div class="tracks" id="favorites-list"></div>
+      </section>
+
       <section class="section">
         <div class="section__head">
           <div class="section__title">
             <h2>Артисты</h2>
-            <span class="count">${artists.length}</span>
+            <span class="count" id="artists-count">${artists.length}</span>
           </div>
         </div>
         ${artistsBlock}
       </section>
     </div>`;
 
+  applyFilters();
+  renderFavorites();
   updateHero();
 }
 
@@ -216,8 +317,8 @@ function collageHtml(artists) {
 
 /* ============================== Экран: артист ============================== */
 
-function renderArtist(id) {
-  const artist = library.artists.find((item) => item.id === id);
+function renderArtist(id, trackId) {
+  const artist = state.library.artists.find((item) => item.id === id);
   if (!artist) {
     renderNotFound();
     return;
@@ -295,6 +396,24 @@ function renderArtist(id) {
                <code>data/library.json</code>.</p></div>`
       }
     </div>`;
+
+  updateFavoritesUI();
+
+  if (trackId) highlightTrack(trackId);
+}
+
+/** Подсветка трека из прямой ссылки «…#/artist/id?track=id». */
+function highlightTrack(trackId) {
+  const row = [...view.querySelectorAll("[data-track-id]")].find(
+    (element) => element.dataset.trackId === trackId,
+  );
+  if (!row) return;
+
+  row.classList.add("is-linked");
+  window.requestAnimationFrame(() => {
+    row.scrollIntoView({ block: "center", behavior: "smooth" });
+    row.querySelector(".track__hit")?.focus({ preventScroll: true });
+  });
 }
 
 /**
@@ -302,7 +421,7 @@ function renderArtist(id) {
  * Пустой или выключенный блок на странице не показывается.
  */
 function noticeHtml() {
-  const site = library.site || {};
+  const site = state.library.site || {};
   if (site.noticeEnabled === false) return "";
 
   const title = String(site.noticeTitle || "").trim();
@@ -322,12 +441,13 @@ function noticeHtml() {
 function trackRow(track, artist, index) {
   const sub = track.album || (track.year ? String(track.year) : "Сингл");
   const album = track.album || "—";
+  const isFav = state.favorites.has(track.id);
 
   return `
-    <button class="track" type="button"
-            data-track-id="${escapeHtml(track.id)}"
-            data-artist-id="${escapeHtml(artist.id)}"
-            aria-label="Играть: ${escapeHtml(track.title)} — ${escapeHtml(artist.name)}">
+    <div class="track" data-track-id="${escapeHtml(track.id)}"
+         data-artist-id="${escapeHtml(artist.id)}">
+      <button class="track__hit" type="button"
+              aria-label="Играть: ${escapeHtml(track.title)} — ${escapeHtml(artist.name)}"></button>
       <span class="track__index" aria-hidden="true">
         <span class="track__num">${String(index + 1).padStart(2, "0")}</span>
         <span class="track__play">${ICONS.play}</span>
@@ -345,8 +465,14 @@ function trackRow(track, artist, index) {
         <span class="track__sub">${escapeHtml(sub)}</span>
       </span>
       <span class="track__album">${escapeHtml(album)}</span>
-      <span class="track__dur">${formatTime(track.duration)}</span>
-    </button>`;
+      <span class="track__side">
+        <span class="track__dur">${formatTime(track.duration)}</span>
+        <button class="track__fav" type="button" data-fav="${escapeHtml(track.id)}"
+                aria-pressed="${isFav}" aria-label="${isFav ? "Убрать из избранного" : "В избранное"}">
+          ${ICONS.heart}
+        </button>
+      </span>
+    </div>`;
 }
 
 function avatarHtml(artist) {
@@ -372,28 +498,306 @@ function cssUrl(path) {
   return `url('${String(path).replaceAll("'", "%27")}')`;
 }
 
+/* ============================== Поиск, жанры, избранное ============================== */
+
+function normalize(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .replaceAll("ё", "е");
+}
+
+function applyFilters() {
+  if (!state.library) return;
+
+  const query = normalize(state.query);
+  let visible = 0;
+
+  view.querySelectorAll("[data-artist-card]").forEach((card) => {
+    const byQuery = !query || (card.dataset.search || "").includes(query);
+    const byGenre = !state.genre || card.dataset.genre === state.genre;
+    const match = byQuery && byGenre;
+    card.hidden = !match;
+    if (match) visible += 1;
+  });
+
+  const count = document.getElementById("artists-count");
+  if (count) count.textContent = String(visible);
+
+  const empty = document.getElementById("search-empty");
+  if (empty) {
+    empty.hidden = !(visible === 0 && Boolean(query || state.genre));
+    empty.textContent = state.genre && !query
+      ? "В этом жанре пока никого нет."
+      : "Никого не нашли. Попробуй другое имя.";
+  }
+
+  updateChips();
+  renderSearchTracks(query);
+}
+
+function updateChips() {
+  view.querySelectorAll("[data-genre]").forEach((chip) => {
+    const active = (chip.dataset.genre || "") === state.genre;
+    chip.classList.toggle("is-active", active);
+    chip.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderSearchTracks(query) {
+  const box = document.getElementById("search-tracks");
+  if (!box) return;
+
+  if (!query) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+
+  const found = [];
+  for (const artist of state.library.artists) {
+    if (state.genre && artist.genre !== state.genre) continue;
+    for (const track of artist.tracks) {
+      const haystack = normalize(`${track.title} ${artist.name} ${track.album || ""}`);
+      if (haystack.includes(query)) found.push({ track, artist });
+    }
+  }
+
+  if (!found.length) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+
+  box.hidden = false;
+  box.innerHTML = `
+    <div class="search-tracks__head">
+      <span>Треки</span><span class="count">${found.length}</span>
+    </div>
+    <div class="tracks">
+      ${found
+        .slice(0, 20)
+        .map(({ track, artist }, index) => trackRow(track, artist, index))
+        .join("")}
+    </div>`;
+
+  syncActive();
+  updateFavoritesUI();
+}
+
+function loadFavorites() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
+    return new Set(Array.isArray(raw) ? raw : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFavorites() {
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify([...state.favorites]));
+  } catch {
+    /* приватный режим */
+  }
+}
+
+function toggleFavorite(id) {
+  if (!id) return;
+
+  if (state.favorites.has(id)) {
+    state.favorites.delete(id);
+    showToast("Убрали из «Моё»");
+  } else {
+    state.favorites.add(id);
+    showToast("Добавили в «Моё»");
+  }
+
+  saveFavorites();
+  updateFavoritesUI();
+  renderFavorites();
+  player.setFavorite(Boolean(player.current) && state.favorites.has(player.current.id));
+}
+
+function updateFavoritesUI() {
+  view.querySelectorAll("[data-fav]").forEach((button) => {
+    const active = state.favorites.has(button.dataset.fav);
+    button.setAttribute("aria-pressed", String(active));
+    button.setAttribute("aria-label", active ? "Убрать из избранного" : "В избранное");
+  });
+}
+
+function renderFavorites() {
+  const section = document.getElementById("favorites-section");
+  if (!section || !state.library) return;
+
+  const items = [];
+  for (const artist of state.library.artists) {
+    for (const track of artist.tracks) {
+      if (state.favorites.has(track.id)) items.push({ track, artist });
+    }
+  }
+
+  section.hidden = items.length === 0;
+
+  const count = document.getElementById("favorites-count");
+  if (count) count.textContent = String(items.length);
+
+  const list = document.getElementById("favorites-list");
+  if (!list) return;
+
+  list.innerHTML = items
+    .map(({ track, artist }, index) => trackRow(track, artist, index))
+    .join("");
+
+  syncActive();
+  updateFavoritesUI();
+}
+
+/* ============================== Очередь ============================== */
+
+function bindQueuePanel() {
+  const panel = document.getElementById("queue");
+  if (!panel) return;
+
+  panel.addEventListener("click", (event) => {
+    if (event.target.closest("#queue-close")) {
+      toggleQueuePanel(false);
+      return;
+    }
+
+    const remove = event.target.closest("[data-queue-remove]");
+    if (remove) {
+      player.removeAt(Number(remove.dataset.queueRemove));
+      return;
+    }
+
+    const play = event.target.closest("[data-queue-index]");
+    if (play) player.jumpTo(Number(play.dataset.queueIndex));
+  });
+}
+
+function toggleQueuePanel(force) {
+  const panel = document.getElementById("queue");
+  if (!panel) return;
+
+  const open = typeof force === "boolean" ? force : panel.hidden;
+  panel.hidden = !open;
+
+  document.getElementById("queue-btn")?.setAttribute("aria-expanded", String(open));
+  if (open) renderQueue();
+}
+
+function renderQueue() {
+  const panel = document.getElementById("queue");
+  if (!panel || panel.hidden) return;
+
+  const list = document.getElementById("queue-list");
+  if (!list) return;
+
+  const mode = document.getElementById("queue-mode");
+  if (mode) {
+    mode.textContent = player.mode === "wave" ? "Моя волна" : "Артист";
+  }
+
+  if (!player.queue.length) {
+    list.innerHTML = `<li class="queue__empty">Очередь пуста</li>`;
+    return;
+  }
+
+  list.innerHTML = player.queue
+    .map(
+      (track, index) => `
+      <li class="queue__item${index === player.index ? " is-active" : ""}">
+        <button class="queue__play" type="button" data-queue-index="${index}">
+          <span class="queue__num">${String(index + 1).padStart(2, "0")}</span>
+          <span class="queue__text">
+            <span class="queue__title">${escapeHtml(track.title)}</span>
+            <span class="queue__artist">${escapeHtml(track.artistName)}</span>
+          </span>
+          <span class="queue__dur">${formatTime(track.duration)}</span>
+        </button>
+        <button class="queue__remove" type="button" data-queue-remove="${index}"
+                aria-label="Убрать «${escapeHtml(track.title)}» из очереди">×</button>
+      </li>`,
+    )
+    .join("");
+
+  const active = list.querySelector(".queue__item.is-active");
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
 /* ============================== Плеер и «Волна» ============================== */
 
-function toggleWave() {
-  if (!library) return;
+function wavePool() {
+  if (!state.genre) return state.library.allTracks;
+  return state.library.allTracks.filter(
+    (track) => artistById(track.artistId)?.genre === state.genre,
+  );
+}
 
-  if (!library.allTracks.length) {
-    showToast("Пока нет треков — добавь их в data/library.json");
+function artistById(id) {
+  return state.library?.artists.find((artist) => artist.id === id) || null;
+}
+
+function toggleWave() {
+  if (!state.library) return;
+
+  const pool = wavePool();
+  if (!pool.length) {
+    showToast(
+      state.genre
+        ? `В жанре «${state.genre}» пока нет треков`
+        : "Пока нет треков — добавь их в data/library.json",
+    );
     return;
   }
 
   if (player.mode === "wave" && player.current && !player.isEnded) {
     player.toggle();
   } else {
-    player.startWave(library.allTracks);
+    player.startWave(pool, { recentIds: state.recent.slice(-6) });
   }
+}
+
+function dislikeCurrent() {
+  const track = player.current;
+  if (!track) return;
+
+  if (player.mode !== "wave") {
+    showToast("«Не это» работает в «Моей волне»");
+    return;
+  }
+
+  player.dislike();
+  showToast(`${track.artistName} — реже в волне`);
 }
 
 function onPlayerState() {
   document.body.classList.toggle("is-playing", player.isPlaying);
+
+  const current = player.current;
+  if (current) {
+    state.recent.push(current.id);
+    if (state.recent.length > RECENT_LIMIT) state.recent.shift();
+
+    if (liveEl) {
+      liveEl.textContent = `Играет: ${current.title} — ${current.artistName}`;
+    }
+  }
+
   syncActive();
   updateHero();
   updateDocumentTitle();
+  updatePlayerChrome();
+  renderQueue();
+}
+
+function updatePlayerChrome() {
+  const track = player.current;
+  player.setFavorite(Boolean(track) && state.favorites.has(track.id));
+
+  const queueBtn = document.getElementById("queue-btn");
+  if (queueBtn) queueBtn.hidden = !track;
 }
 
 function syncActive() {
@@ -401,7 +805,8 @@ function syncActive() {
   view.querySelectorAll("[data-track-id]").forEach((row) => {
     const active = Boolean(currentId) && row.dataset.trackId === currentId;
     row.classList.toggle("is-active", active);
-    row.setAttribute("aria-current", active ? "true" : "false");
+    if (active) row.setAttribute("aria-current", "true");
+    else row.removeAttribute("aria-current");
   });
 }
 
@@ -428,6 +833,9 @@ function updateHero() {
       : "Включить волну";
   }
 
+  const dislike = hero.querySelector("[data-action='dislike']");
+  if (dislike) dislike.hidden = !inWave;
+
   const now = hero.querySelector("#wave-now");
   if (now) {
     now.innerHTML = inWave
@@ -446,6 +854,20 @@ function updateDocumentTitle() {
 /* ============================== События ============================== */
 
 function onViewClick(event) {
+  const favButton = event.target.closest("[data-fav]");
+  if (favButton) {
+    event.preventDefault();
+    toggleFavorite(favButton.dataset.fav);
+    return;
+  }
+
+  const genreChip = event.target.closest("[data-genre]");
+  if (genreChip) {
+    state.genre = genreChip.dataset.genre || "";
+    applyFilters();
+    return;
+  }
+
   const actionEl = event.target.closest("[data-action]");
   if (actionEl) {
     const action = actionEl.dataset.action;
@@ -455,8 +877,13 @@ function onViewClick(event) {
       return;
     }
 
+    if (action === "dislike") {
+      dislikeCurrent();
+      return;
+    }
+
     if (action === "play-artist" || action === "shuffle-artist") {
-      const artist = library?.artists.find(
+      const artist = state.library?.artists.find(
         (item) => item.id === actionEl.dataset.artist,
       );
       if (artist) {
@@ -472,40 +899,86 @@ function onViewClick(event) {
   }
 
   const trackBtn = event.target.closest("[data-track-id]");
-  if (trackBtn && library) {
-    const artist = library.artists.find(
+  if (trackBtn && state.library) {
+    const artist = state.library.artists.find(
       (item) => item.id === trackBtn.dataset.artistId,
     );
     const track = artist?.tracks.find(
       (item) => item.id === trackBtn.dataset.trackId,
     );
-    if (artist && track) player.playTrack(track, artist);
+    if (artist && track) {
+      player.playTrack(track, artist);
+      linkTrack(track, artist);
+    }
+  }
+}
+
+/** Держит адрес в актуальном виде: #/artist/id?track=id. */
+function linkTrack(track, artist) {
+  const route = currentRoute();
+  if (route.name !== "artist" || route.id !== artist.id) return;
+
+  try {
+    history.replaceState(
+      null,
+      "",
+      `#/artist/${encodeURIComponent(artist.id)}?track=${encodeURIComponent(track.id)}`,
+    );
+  } catch {
+    /* ignore */
   }
 }
 
 function onViewInput(event) {
   if (event.target.id !== "artist-search") return;
 
-  const query = event.target.value.trim().toLowerCase();
-  let visible = 0;
-
-  view.querySelectorAll("[data-artist-card]").forEach((card) => {
-    const match = (card.dataset.search || "").includes(query);
-    card.hidden = !match;
-    if (match) visible += 1;
-  });
-
-  const empty = document.getElementById("search-empty");
-  if (empty) empty.hidden = visible > 0;
+  state.query = event.target.value;
+  window.clearTimeout(searchTimer);
+  searchTimer = window.setTimeout(applyFilters, 120);
 }
 
 function onKeydown(event) {
-  if (event.code !== "Space") return;
-  const tag = document.activeElement?.tagName;
-  if (["INPUT", "TEXTAREA", "BUTTON", "A", "SELECT"].includes(tag)) return;
-  if (!player.current) return;
-  event.preventDefault();
-  player.toggle();
+  const target = event.target;
+  const tag = target?.tagName;
+  const typing =
+    ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || target?.isContentEditable;
+
+  if (event.code === "Space") {
+    if (typing || ["BUTTON", "A"].includes(tag)) return;
+    if (!player.current) return;
+    event.preventDefault();
+    player.toggle();
+    return;
+  }
+
+  if (typing) return;
+
+  if (event.key === "ArrowRight") {
+    if (!player.current) return;
+    event.preventDefault();
+    player.seekBy(5);
+  } else if (event.key === "ArrowLeft") {
+    if (!player.current) return;
+    event.preventDefault();
+    player.seekBy(-5);
+  } else if (event.key === "m" || event.key === "M" || event.key === "ь") {
+    if (!player.current) return;
+    player.toggleMute();
+  } else if (event.key === "n" || event.key === "N" || event.key === "т") {
+    if (!player.current) return;
+    player.next();
+  } else if (event.key === "p" || event.key === "P" || event.key === "з") {
+    if (!player.current) return;
+    player.prev();
+  }
+}
+
+function isIOS() {
+  const ua = navigator.userAgent || "";
+  return (
+    /iPad|iPhone|iPod/.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
 }
 
 /* ============================== Служебные экраны ============================== */
@@ -536,6 +1009,7 @@ function renderNotFound() {
 }
 
 function showToast(message) {
+  if (!toastEl) return;
   toastEl.textContent = message;
   toastEl.classList.add("is-visible");
   window.clearTimeout(toastTimer);

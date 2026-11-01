@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=20261030">
+  <link rel="stylesheet" href="css/style.css?v=20261102">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
@@ -106,6 +106,22 @@
             <path d="M18 5v14M4 5.5v13a1 1 0 0 0 1.55.83L15 13.83a1 1 0 0 0 0-1.66L5.55 4.67A1 1 0 0 0 4 5.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
+
+        <button class="icon-btn player__extra" id="player-fav" type="button"
+                aria-pressed="false" aria-label="В избранное">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 20.2s-7.5-4.6-7.5-9.8A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.5 3c0 5.2-7.5 9.8-7.5 9.8Z"
+                  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <button class="icon-btn player__extra" id="queue-btn" type="button"
+                aria-expanded="false" aria-controls="queue" aria-label="Очередь">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
 
       <div class="player__timeline">
@@ -134,12 +150,29 @@
     </div>
   </div>
 
+  <div class="queue" id="queue" hidden aria-label="Очередь треков">
+    <div class="queue__head">
+      <div class="queue__heading">
+        <strong>Далее</strong>
+        <span class="queue__mode" id="queue-mode">Моя волна</span>
+      </div>
+      <button class="queue__close" id="queue-close" type="button" aria-label="Закрыть очередь">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <ol class="queue__list" id="queue-list"></ol>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sr-only" id="live" role="status" aria-live="polite"></div>
 
   <noscript>
     <div class="noscript">Для прослушивания музыки включите JavaScript в браузере.</div>
   </noscript>
 
-  <script type="module" src="js/app.js?v=20261030"></script>
+  <script type="module" src="js/app.js?v=20261102"></script>
 </body>
 </html>
