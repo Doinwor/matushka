@@ -5,7 +5,7 @@
  * (по клику на обложку — карточкой по центру).
  */
 
-import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261102";
+import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261103";
 
 const VOLUME_KEY = "matushka:volume";
 const LAST_KEY = "matushka:last";
@@ -97,6 +97,8 @@ export class Player {
     this.preloader = null;
     this.retried = new Set();
     this.scrubbing = false;
+    this.pendingSeek = null;
+    this.pendingSeekTimer = 0;
 
     this.ui = {
       art: root.querySelector("#player-art"),
@@ -356,6 +358,8 @@ export class Player {
     if (!track) return;
 
     this.#clearPreload();
+    this.pendingSeek = null;
+    window.clearTimeout(this.pendingSeekTimer);
     this.startAt = Math.max(0, Number(startAt) || 0);
 
     this.audio.src = track.src;
@@ -442,6 +446,13 @@ export class Player {
       const duration = this.audio.duration;
       if (!Number.isFinite(duration) || duration <= 0) return;
       const target = (Number(seek.value) / 1000) * duration;
+      this.pendingSeek = target;
+      window.clearTimeout(this.pendingSeekTimer);
+      this.pendingSeekTimer = window.setTimeout(() => {
+        // Перемотка не удалась (сеть/буфер) — возвращаем реальную позицию.
+        this.pendingSeek = null;
+        this.#syncFromAudio();
+      }, 4000);
       this.audio.currentTime = target;
       this.#setFill((target / duration) * 100);
       this.#setTime(target, duration);
@@ -485,6 +496,16 @@ export class Player {
     this.audio.addEventListener("timeupdate", () => {
       const duration = this.audio.duration;
       if (!Number.isFinite(duration) || duration <= 0) return;
+
+      // Пока браузер выполняет перемотку, не откатываем ползунок назад.
+      if (this.pendingSeek !== null) {
+        if (Math.abs(this.audio.currentTime - this.pendingSeek) < 0.75) {
+          this.pendingSeek = null;
+        } else {
+          return;
+        }
+      }
+
       this.#setFill((this.audio.currentTime / duration) * 100);
       this.#setTime(this.audio.currentTime, duration);
       this.#syncPositionState();
@@ -521,11 +542,9 @@ export class Player {
     });
     this.audio.addEventListener("volumechange", () => this.#syncMute());
     this.audio.addEventListener("seeked", () => {
-      const duration = this.audio.duration;
-      if (Number.isFinite(duration) && duration > 0) {
-        this.#setFill((this.audio.currentTime / duration) * 100);
-        this.#setTime(this.audio.currentTime, duration);
-      }
+      this.pendingSeek = null;
+      window.clearTimeout(this.pendingSeekTimer);
+      this.#syncFromAudio();
       this.#syncPositionState(true);
     });
 
@@ -711,6 +730,14 @@ export class Player {
     this.ui.seek.setAttribute("aria-valuenow", String(Math.round(value)));
   }
 
+  /** Показывает в интерфейсе реальную позицию аудио. */
+  #syncFromAudio() {
+    const duration = this.audio.duration;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+    this.#setFill((this.audio.currentTime / duration) * 100);
+    this.#setTime(this.audio.currentTime, duration);
+  }
+
   #setTime(current, total) {
     this.ui.timeCurrent.textContent = formatTime(current);
     this.ui.timeTotal.textContent = formatTime(total);
@@ -727,11 +754,12 @@ export class Player {
   #saveState() {
     const track = this.current;
     if (!track) return;
+    const position = this.pendingSeek !== null ? this.pendingSeek : this.audio.currentTime;
     writeJSON(LAST_KEY, {
       trackId: track.id,
       artistId: track.artistId,
       mode: this.mode,
-      time: Math.max(0, Math.round(this.audio.currentTime || 0)),
+      time: Math.max(0, Math.round(position || 0)),
       savedAt: Date.now(),
     });
   }

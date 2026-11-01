@@ -14,8 +14,8 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261102";
-import { Player } from "./player.js?v=20261102";
+} from "./data.js?v=20261103";
+import { Player } from "./player.js?v=20261103";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
 const FAV_KEY = "matushka:favorites";
