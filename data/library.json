@@ -194,6 +194,7 @@
           "title": "День Победы",
           "src": "audio/lev-leshchenko/lev-leshchenko-01.mp3",
           "duration": 234,
+          "year": 1975,
           "cover": "img/covers/lev-leshchenko-01.jpg"
         },
         {
@@ -201,6 +202,7 @@
           "title": "Родная земля",
           "src": "audio/lev-leshchenko/lev-leshchenko-02.mp3",
           "duration": 273,
+          "year": 1978,
           "cover": "img/covers/lev-leshchenko-02.jpg"
         }
       ]
