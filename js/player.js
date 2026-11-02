@@ -5,7 +5,7 @@
  * (по клику на обложку — карточкой по центру).
  */
 
-import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261103";
+import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261104";
 
 const VOLUME_KEY = "matushka:volume";
 const LAST_KEY = "matushka:last";
@@ -188,6 +188,19 @@ export class Player {
       return true;
     }
     return this.playArtist(artist, { startId: track.id });
+  }
+
+  /** Произвольная подборка треков — например, «Избранное». */
+  playCollection(tracks, { shuffled = false, mode = "collection" } = {}) {
+    const list = (Array.isArray(tracks) ? tracks : []).filter(Boolean);
+    if (!list.length) return false;
+
+    this.pool = null;
+    this.queue = shuffled ? smartShuffle(list) : list.slice();
+    this.index = 0;
+    this.mode = mode;
+    this.#load(true);
+    return true;
   }
 
   /** Восстанавливает последний трек и позицию после перезагрузки. */

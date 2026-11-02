@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=20261103">
+  <link rel="stylesheet" href="css/style.css?v=20261104">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
@@ -63,6 +63,50 @@
       <p>Матушка · русская музыка · 2026</p>
     </footer>
   </div>
+
+  <nav class="dock" aria-label="Основная навигация">
+    <div class="dock__inner">
+      <a class="dock__item" href="#/" data-dock="home">
+        <span class="dock__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 10.6 12 4l8 6.6V19a2 2 0 0 1-2 2h-3.6v-6.2H9.6V21H6a2 2 0 0 1-2-2v-8.4Z"
+                  fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="dock__label">Главная</span>
+      </a>
+
+      <a class="dock__item" href="#/search" data-dock="search">
+        <span class="dock__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="m20 20-3.6-3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="dock__label">Поиск</span>
+      </a>
+
+      <button class="dock__wave" id="dock-wave" type="button"
+              aria-label="Включить мою волну" aria-pressed="false">
+        <span class="dock__orb" aria-hidden="true">
+          <span class="eq"><span></span><span></span><span></span></span>
+        </span>
+        <span class="dock__label">Волна</span>
+      </button>
+
+      <a class="dock__item" href="#/favorites" data-dock="favorites">
+        <span class="dock__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 20.2s-7.5-4.6-7.5-9.8A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.5 3c0 5.2-7.5 9.8-7.5 9.8Z"
+                  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="dock__label">Избранное</span>
+        <span class="dock__badge" id="dock-fav-count" hidden>0</span>
+      </a>
+    </div>
+  </nav>
 
   <div class="player" id="player" hidden>
     <div class="player__backdrop" aria-hidden="true"></div>
@@ -173,6 +217,6 @@
     <div class="noscript">Для прослушивания музыки включите JavaScript в браузере.</div>
   </noscript>
 
-  <script type="module" src="js/app.js?v=20261103"></script>
+  <script type="module" src="js/app.js?v=20261104"></script>
 </body>
 </html>

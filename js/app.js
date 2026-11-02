@@ -14,8 +14,8 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261103";
-import { Player } from "./player.js?v=20261103";
+} from "./data.js?v=20261104";
+import { Player } from "./player.js?v=20261104";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
 const FAV_KEY = "matushka:favorites";
@@ -31,10 +31,13 @@ const ICONS = {
   heart: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.2s-7.5-4.6-7.5-9.8A4.4 4.4 0 0 1 12 7.4a4.4 4.4 0 0 1 7.5 3c0 5.2-7.5 9.8-7.5 9.8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>`,
   queue: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
   dislike: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m8.4 15.6 7.2-7.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
 };
 
 const view = document.getElementById("view");
 const topWave = document.getElementById("top-wave");
+const dockWave = document.getElementById("dock-wave");
+const dockFavCount = document.getElementById("dock-fav-count");
 const toastEl = document.getElementById("toast");
 const liveEl = document.getElementById("live");
 
@@ -67,10 +70,12 @@ async function init() {
 
   window.addEventListener("hashchange", render);
   topWave.addEventListener("click", toggleWave);
+  dockWave?.addEventListener("click", toggleWave);
   view.addEventListener("click", onViewClick);
   view.addEventListener("input", onViewInput);
   document.addEventListener("keydown", onKeydown);
   bindQueuePanel();
+  updateFavoritesBadge();
 
   try {
     state.library = await loadLibrary();
@@ -80,6 +85,7 @@ async function init() {
   }
 
   player.restore(state.library);
+  updateFavoritesBadge();
   render();
 }
 
@@ -91,6 +97,9 @@ function currentRoute() {
 
   const [path, queryString] = raw.split("?");
   const params = new URLSearchParams(queryString || "");
+
+  if (path === "/search") return { name: "search" };
+  if (path === "/favorites") return { name: "favorites" };
 
   const artistMatch = path.match(/^\/artist\/([^/]+)$/);
   if (artistMatch) {
@@ -112,12 +121,17 @@ function render() {
   const route = currentRoute();
   if (route.name === "artist") {
     renderArtist(route.id, route.trackId);
+  } else if (route.name === "search") {
+    renderSearch();
+  } else if (route.name === "favorites") {
+    renderFavoritesView();
   } else if (route.name === "home") {
     renderHome();
   } else {
     renderNotFound();
   }
 
+  syncDock(route.name);
   syncActive();
   updateHero();
   updateDocumentTitle();
@@ -153,74 +167,8 @@ function renderHome() {
   const { artists, allTracks } = state.library;
   const isWave = player.mode === "wave" && Boolean(player.current);
   const live = isWave && player.isPlaying;
-  const genres = [
-    ...new Set(artists.map((artist) => artist.genre).filter(Boolean)),
-  ].sort((a, b) => a.localeCompare(b, "ru"));
 
-  // Выбранный жанр мог исчезнуть вместе с артистом — сбрасываем фильтр.
-  if (state.genre && !genres.includes(state.genre)) state.genre = "";
-
-  const cards = artists
-    .map((artist) => {
-      const count = artist.tracks.length;
-      const meta = `${count} ${pluralTracks(count)} · ${minutesText(
-        artist.tracks.reduce((sum, track) => sum + Math.max(0, track.duration), 0),
-      )}`;
-      const genre = artist.genre
-        ? `<span class="artist-card__badge">${escapeHtml(artist.genre)}</span>`
-        : "";
-      const haystack = `${artist.name} ${artist.genre} ${artist.tracks
-        .map((track) => track.title)
-        .join(" ")}`;
-
-      return `
-        <a class="artist-card" href="#/artist/${encodeURIComponent(artist.id)}"
-           data-artist-card
-           data-genre="${escapeHtml(artist.genre || "")}"
-           data-search="${escapeHtml(normalize(haystack))}">
-          <span class="artist-card__media" style="${gradientVars(artist.id)}">
-            <span class="artist-card__initials" aria-hidden="true">${escapeHtml(initialsOf(artist.name))}</span>
-            ${imageHtml("artist-card__img", artist.photo)}
-            ${genre}
-            <span class="artist-card__play" aria-hidden="true">${ICONS.play}</span>
-          </span>
-          <span class="artist-card__name">${escapeHtml(artist.name)}</span>
-          <span class="artist-card__meta">${escapeHtml(meta)}</span>
-        </a>`;
-    })
-    .join("");
-
-  const chips = genres.length > 1
-    ? `<div class="chips" id="genre-chips" role="group" aria-label="Жанры">
-         <button class="genre-chip${state.genre ? "" : " is-active"}" type="button" data-genre="">Все</button>
-         ${genres
-           .map(
-             (genre) => `
-           <button class="genre-chip${state.genre === genre ? " is-active" : ""}" type="button"
-                   data-genre="${escapeHtml(genre)}">${escapeHtml(genre)}</button>`,
-           )
-           .join("")}
-       </div>`
-    : "";
-
-  const artistsBlock = artists.length
-    ? `
-      <label class="search">
-        ${ICONS.search}
-        <input id="artist-search" type="search" placeholder="Артист, трек или альбом"
-               autocomplete="off" enterkeyhint="search" aria-label="Поиск по артистам и трекам"
-               value="${escapeHtml(state.query)}">
-      </label>
-      ${chips}
-      <div class="search-tracks" id="search-tracks" hidden></div>
-      <div class="artists" id="artists-list">${cards}</div>
-      <div class="no-results" id="search-empty" hidden>Никого не нашли. Попробуй другое имя.</div>`
-    : `
-      <div class="state-card">
-        <h2>Пока пусто</h2>
-        <p>Артистов ещё нет. Добавь первого в <code>data/library.json</code> —
-           и он появится здесь вместе с треками.</p>
-      </div>`;
+  const cards = artists.map(artistCardHtml).join("");
 
   view.innerHTML = `
     <div class="screen">
@@ -265,31 +213,59 @@ function renderHome() {
         ${collageHtml(artists)}
       </section>
 
-      <section class="section" id="favorites-section" hidden>
-        <div class="section__head">
-          <div class="section__title">
-            <h2>Моё</h2>
-            <span class="count" id="favorites-count">0</span>
-          </div>
-          <span class="section__note">Только на этом устройстве</span>
-        </div>
-        <div class="tracks" id="favorites-list"></div>
-      </section>
-
-      <section class="section">
+      <section class="section" id="artists">
         <div class="section__head">
           <div class="section__title">
             <h2>Артисты</h2>
-            <span class="count" id="artists-count">${artists.length}</span>
+            <span class="count">${artists.length}</span>
           </div>
+          <a class="section__link" href="#/search">
+            <span>Поиск</span>${ICONS.chevron}
+          </a>
         </div>
-        ${artistsBlock}
+
+        ${
+          artists.length
+            ? `<div class="artists">${cards}</div>`
+            : `<div class="state-card">
+                 <h2>Пока пусто</h2>
+                 <p>Артистов ещё нет. Добавь первого в <code>data/library.json</code> —
+                    и он появится здесь вместе с треками.</p>
+               </div>`
+        }
       </section>
     </div>`;
 
-  applyFilters();
-  renderFavorites();
   updateHero();
+}
+
+/** Карточка артиста — общая для главной и поиска. */
+function artistCardHtml(artist) {
+  const count = artist.tracks.length;
+  const meta = `${count} ${pluralTracks(count)} · ${minutesText(
+    artist.tracks.reduce((sum, track) => sum + Math.max(0, track.duration), 0),
+  )}`;
+  const genre = artist.genre
+    ? `<span class="artist-card__badge">${escapeHtml(artist.genre)}</span>`
+    : "";
+  const haystack = `${artist.name} ${artist.genre} ${artist.tracks
+    .map((track) => track.title)
+    .join(" ")}`;
+
+  return `
+    <a class="artist-card" href="#/artist/${encodeURIComponent(artist.id)}"
+       data-artist-card
+       data-genre="${escapeHtml(artist.genre || "")}"
+       data-search="${escapeHtml(normalize(haystack))}">
+      <span class="artist-card__media" style="${gradientVars(artist.id)}">
+        <span class="artist-card__initials" aria-hidden="true">${escapeHtml(initialsOf(artist.name))}</span>
+        ${imageHtml("artist-card__img", artist.photo)}
+        ${genre}
+        <span class="artist-card__play" aria-hidden="true">${ICONS.play}</span>
+      </span>
+      <span class="artist-card__name">${escapeHtml(artist.name)}</span>
+      <span class="artist-card__meta">${escapeHtml(meta)}</span>
+    </a>`;
 }
 
 function statHtml(value, label) {
@@ -506,6 +482,78 @@ function normalize(value) {
     .replaceAll("ё", "е");
 }
 
+/* ============================== Экран: поиск ============================== */
+
+function renderSearch() {
+  const { artists } = state.library;
+  const genres = [
+    ...new Set(artists.map((artist) => artist.genre).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "ru"));
+
+  // Выбранный жанр мог исчезнуть вместе с артистом — сбрасываем фильтр.
+  if (state.genre && !genres.includes(state.genre)) state.genre = "";
+
+  const cards = artists.map(artistCardHtml).join("");
+
+  view.innerHTML = `
+    <div class="screen">
+      <header class="page-head">
+        <span class="page-head__eyebrow">${ICONS.search}<span>Поиск</span></span>
+        <h1 class="page-head__title">Найти <em>своё</em></h1>
+        <p class="page-head__text">Артисты, треки и альбомы. Начни вводить — покажем совпадения.</p>
+      </header>
+
+      <div class="search-wrap">
+        <label class="search search--lg">
+          ${ICONS.search}
+          <input id="artist-search" type="search" placeholder="Артист, трек или альбом"
+                 autocomplete="off" enterkeyhint="search" aria-label="Поиск по артистам и трекам"
+                 value="${escapeHtml(state.query)}">
+          <button class="search__clear" type="button" data-action="clear-search"
+                  aria-label="Очистить поиск" ${state.query ? "" : "hidden"}>
+            ${ICONS.close}
+          </button>
+        </label>
+        ${chipsHtml(genres)}
+      </div>
+
+      <div class="search-tracks" id="search-tracks" hidden></div>
+
+      <section class="section section--flat">
+        <div class="section__head">
+          <div class="section__title">
+            <h2>Артисты</h2>
+            <span class="count" id="artists-count">${artists.length}</span>
+          </div>
+          <span class="section__note">По имени и трекам</span>
+        </div>
+        <div class="artists" id="artists-list">${cards}</div>
+        <div class="no-results" id="search-empty" hidden>Никого не нашли. Попробуй другое имя.</div>
+      </section>
+    </div>`;
+
+  applyFilters();
+  updateFavoritesUI();
+}
+
+function chipsHtml(genres) {
+  if (genres.length <= 1) return "";
+
+  return `
+    <div class="chips" role="group" aria-label="Жанры">
+      <button class="genre-chip${state.genre ? "" : " is-active"}" type="button"
+              data-genre="" aria-pressed="${state.genre ? "false" : "true"}">Все</button>
+      ${genres
+        .map(
+          (genre) => `
+        <button class="genre-chip${state.genre === genre ? " is-active" : ""}" type="button"
+                data-genre="${escapeHtml(genre)}"
+                aria-pressed="${state.genre === genre}">${escapeHtml(genre)}</button>`,
+        )
+        .join("")}
+    </div>`;
+}
+
 function applyFilters() {
   if (!state.library) return;
 
@@ -536,7 +584,7 @@ function applyFilters() {
 }
 
 function updateChips() {
-  view.querySelectorAll("[data-genre]").forEach((chip) => {
+  view.querySelectorAll(".genre-chip[data-genre]").forEach((chip) => {
     const active = (chip.dataset.genre || "") === state.genre;
     chip.classList.toggle("is-active", active);
     chip.setAttribute("aria-pressed", String(active));
@@ -601,20 +649,41 @@ function saveFavorites() {
   }
 }
 
+function favoritesItems() {
+  const items = [];
+  if (!state.library) return items;
+
+  for (const artist of state.library.artists) {
+    for (const track of artist.tracks) {
+      if (state.favorites.has(track.id)) items.push({ track, artist });
+    }
+  }
+
+  return items;
+}
+
+function updateFavoritesBadge() {
+  if (!dockFavCount) return;
+  const count = state.favorites.size;
+  dockFavCount.textContent = count > 99 ? "99+" : String(count);
+  dockFavCount.hidden = count === 0;
+}
+
 function toggleFavorite(id) {
   if (!id) return;
 
   if (state.favorites.has(id)) {
     state.favorites.delete(id);
-    showToast("Убрали из «Моё»");
+    showToast("Убрали из избранного");
   } else {
     state.favorites.add(id);
-    showToast("Добавили в «Моё»");
+    showToast("Добавили в избранное");
   }
 
   saveFavorites();
   updateFavoritesUI();
-  renderFavorites();
+  updateFavoritesBadge();
+  if (currentRoute().name === "favorites") renderFavoritesView();
   player.setFavorite(Boolean(player.current) && state.favorites.has(player.current.id));
 }
 
@@ -627,29 +696,88 @@ function updateFavoritesUI() {
 }
 
 function renderFavorites() {
-  const section = document.getElementById("favorites-section");
-  if (!section || !state.library) return;
-
-  const items = [];
-  for (const artist of state.library.artists) {
-    for (const track of artist.tracks) {
-      if (state.favorites.has(track.id)) items.push({ track, artist });
-    }
-  }
-
-  section.hidden = items.length === 0;
-
-  const count = document.getElementById("favorites-count");
-  if (count) count.textContent = String(items.length);
-
   const list = document.getElementById("favorites-list");
-  if (!list) return;
+  if (!list || !state.library) return;
 
+  const items = favoritesItems();
   list.innerHTML = items
     .map(({ track, artist }, index) => trackRow(track, artist, index))
     .join("");
 
+  const count = document.getElementById("favorites-count");
+  if (count) count.textContent = String(items.length);
+
   syncActive();
+  updateFavoritesUI();
+  updateFavoritesBadge();
+}
+
+function renderFavoritesView() {
+  if (!state.library) return;
+
+  const items = favoritesItems();
+  const seconds = items.reduce(
+    (sum, { track }) => sum + Math.max(0, track.duration),
+    0,
+  );
+  const hasItems = items.length > 0;
+
+  view.innerHTML = `
+    <div class="screen">
+      <header class="page-head">
+        <span class="page-head__eyebrow page-head__eyebrow--red">
+          ${ICONS.heart}<span>Коллекция</span>
+        </span>
+        <h1 class="page-head__title">Моё <em>избранное</em></h1>
+        <p class="page-head__text">Треки, которые ты отметил сердечком. Хранятся на этом устройстве.</p>
+      </header>
+
+      <section class="collection" aria-label="Избранное">
+        <div class="collection__art" aria-hidden="true">
+          <span class="collection__heart">${ICONS.heart}</span>
+        </div>
+        <div class="collection__body">
+          <span class="collection__label">Плейлист</span>
+          <h2 class="collection__title">Избранное</h2>
+          <p class="collection__meta">
+            <span id="favorites-count">${items.length}</span>
+            <span>${pluralTracks(items.length)}</span>
+            ${hasItems ? `<span class="collection__dot">·</span><span>${minutesText(seconds)}</span>` : ""}
+          </p>
+          <div class="collection__actions">
+            <button class="btn btn--primary" type="button" data-action="play-favorites"
+                    ${hasItems ? "" : "disabled"}>
+              ${ICONS.play}<span>Слушать</span>
+            </button>
+            <button class="btn btn--ghost" type="button" data-action="shuffle-favorites"
+                    ${hasItems ? "" : "disabled"}>
+              ${ICONS.shuffle}<span>Вперемешку</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      ${
+        hasItems
+          ? `<div class="tracks-head">
+               <h2>Треки</h2>
+               <span>${items.length} ${pluralTracks(items.length)}</span>
+             </div>
+             <div class="tracks" id="favorites-list"></div>`
+          : `<div class="favorites-empty" id="favorites-empty">
+               <span class="favorites-empty__icon" aria-hidden="true">${ICONS.heart}</span>
+               <h2>Пока пусто</h2>
+               <p>Нажми сердечко у любого трека — и он появится здесь.
+                  Избранное хранится только на этом устройстве.</p>
+               <div class="favorites-empty__actions">
+                 <a class="btn btn--primary" href="#/search">${ICONS.search}<span>Найти треки</span></a>
+                 <a class="btn btn--ghost" href="#/">На главную</a>
+               </div>
+             </div>`
+      }
+    </div>`;
+
+  renderFavorites();
   updateFavoritesUI();
 }
 
@@ -696,7 +824,12 @@ function renderQueue() {
 
   const mode = document.getElementById("queue-mode");
   if (mode) {
-    mode.textContent = player.mode === "wave" ? "Моя волна" : "Артист";
+    mode.textContent =
+      player.mode === "wave"
+        ? "Моя волна"
+        : player.mode === "collection"
+          ? "Избранное"
+          : "Артист";
   }
 
   if (!player.queue.length) {
@@ -800,6 +933,16 @@ function updatePlayerChrome() {
   if (queueBtn) queueBtn.hidden = !track;
 }
 
+function syncDock(routeName) {
+  const active = routeName === "artist" ? "home" : routeName;
+  document.querySelectorAll("[data-dock]").forEach((item) => {
+    const on = item.dataset.dock === active;
+    item.classList.toggle("is-active", on);
+    if (on) item.setAttribute("aria-current", "page");
+    else item.removeAttribute("aria-current");
+  });
+}
+
 function syncActive() {
   const currentId = player.current?.id;
   view.querySelectorAll("[data-track-id]").forEach((row) => {
@@ -814,6 +957,11 @@ function updateHero() {
   const inWave = player.mode === "wave" && Boolean(player.current);
   topWave.classList.toggle("is-active", inWave);
   topWave.setAttribute("aria-pressed", String(inWave));
+
+  if (dockWave) {
+    dockWave.classList.toggle("is-active", inWave);
+    dockWave.setAttribute("aria-pressed", String(inWave));
+  }
 
   const hero = document.getElementById("hero");
   if (!hero) return;
@@ -846,9 +994,22 @@ function updateHero() {
 
 function updateDocumentTitle() {
   const track = player.current;
-  document.title = track
-    ? `${player.isPlaying ? "▶ " : ""}${track.title} — ${track.artistName} · Матушка`
-    : DEFAULT_TITLE;
+  if (track) {
+    document.title = `${player.isPlaying ? "▶ " : ""}${track.title} — ${track.artistName} · Матушка`;
+    return;
+  }
+
+  const route = currentRoute();
+  if (route.name === "search") {
+    document.title = "Поиск — Матушка";
+  } else if (route.name === "favorites") {
+    document.title = "Избранное — Матушка";
+  } else if (route.name === "artist") {
+    const artist = artistById(route.id);
+    document.title = artist ? `${artist.name} — Матушка` : DEFAULT_TITLE;
+  } else {
+    document.title = DEFAULT_TITLE;
+  }
 }
 
 /* ============================== События ============================== */
@@ -861,7 +1022,7 @@ function onViewClick(event) {
     return;
   }
 
-  const genreChip = event.target.closest("[data-genre]");
+  const genreChip = event.target.closest(".genre-chip[data-genre]");
   if (genreChip) {
     state.genre = genreChip.dataset.genre || "";
     applyFilters();
@@ -874,6 +1035,30 @@ function onViewClick(event) {
 
     if (action === "wave") {
       toggleWave();
+      return;
+    }
+
+    if (action === "clear-search") {
+      event.preventDefault();
+      state.query = "";
+      const input = document.getElementById("artist-search");
+      if (input) input.value = "";
+      updateSearchClear();
+      applyFilters();
+      input?.focus();
+      return;
+    }
+
+    if (action === "play-favorites" || action === "shuffle-favorites") {
+      const tracks = favoritesItems().map(({ track }) => track);
+      if (!tracks.length) {
+        showToast("В избранном пока пусто");
+        return;
+      }
+      player.playCollection(tracks, {
+        shuffled: action === "shuffle-favorites",
+        mode: "collection",
+      });
       return;
     }
 
@@ -933,8 +1118,15 @@ function onViewInput(event) {
   if (event.target.id !== "artist-search") return;
 
   state.query = event.target.value;
+  updateSearchClear();
   window.clearTimeout(searchTimer);
   searchTimer = window.setTimeout(applyFilters, 120);
+}
+
+function updateSearchClear() {
+  const button = view.querySelector(".search__clear");
+  if (!button) return;
+  button.hidden = !state.query;
 }
 
 function onKeydown(event) {
