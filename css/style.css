@@ -3319,3 +3319,360 @@ body.player-open .dock {
     border-radius: 20px;
   }
 }
+
+/* ============================================================
+   Мобильная полировка (2026-11-05)
+   Нижний стек: плеер больше не перекрывает кнопку «Волна».
+   Безопасные зоны iPhone, удобные тап-зоны, таймер сна.
+   ============================================================ */
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+}
+
+.player__tools {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  :root {
+    --dock-space: calc(70px + env(safe-area-inset-bottom, 0px));
+    --player-space: 0px;
+  }
+
+  /* Место под мини-плеер появляется только когда он реально виден. */
+  body.has-player {
+    --player-space: 92px;
+  }
+
+  /* Верхняя панель не залезает под вырез камеры. */
+  .topbar {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* iOS не зумит страницу при фокусе на поиске. */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* ---------- Нижний док ---------- */
+
+  .dock {
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .dock__inner {
+    align-items: stretch;
+  }
+
+  .dock__item,
+  .dock__wave {
+    justify-content: center;
+    gap: 3px;
+    min-height: 58px;
+    padding: 5px 2px;
+  }
+
+  .dock__icon {
+    height: 28px;
+  }
+
+  .dock__label {
+    font-size: 9.5px;
+  }
+
+  .dock__badge {
+    top: 0;
+    right: calc(50% - 24px);
+  }
+
+  /* «Волна» остаётся акцентной, но целиком внутри дока. */
+  .dock__orb {
+    width: 34px;
+    height: 34px;
+    margin-top: 0;
+    border: 0;
+    border-radius: 50%;
+    box-shadow:
+      0 8px 18px -6px rgba(255, 75, 62, 0.75),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .dock__orb .eq {
+    height: 13px;
+  }
+
+  .dock__orb .eq span {
+    width: 2.5px;
+  }
+
+  .dock__wave:hover .dock__orb,
+  .dock__wave:active .dock__orb {
+    transform: none;
+  }
+
+  .dock__wave.is-active .dock__orb {
+    box-shadow:
+      0 0 0 3px rgba(255, 75, 62, 0.2),
+      0 10px 22px -8px rgba(255, 75, 62, 0.95),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /* ---------- Удобные тап-зоны ---------- */
+
+  .track__fav {
+    width: 40px;
+    height: 40px;
+  }
+
+  .track__fav svg {
+    width: 19px;
+    height: 19px;
+  }
+
+  .search__clear {
+    width: 40px;
+    height: 40px;
+  }
+
+  .queue__remove {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+
+  .queue__play {
+    min-height: 52px;
+  }
+
+  /* ---------- Инструменты полноэкранного плеера ---------- */
+
+  .player.is-open .player__tools {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .player.is-open .player__panel {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+  }
+
+  .player__tool {
+    flex: 1 1 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 42px;
+    padding: 0 10px;
+    overflow: hidden;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  .player__tool span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .player__tool svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  .player__tool:active {
+    transform: scale(0.97);
+  }
+
+  .player__tool.is-active {
+    border-color: rgba(255, 75, 62, 0.45);
+    background: rgba(255, 75, 62, 0.12);
+    color: var(--red-bright);
+  }
+}
+
+/* Невысокие экраны: полноэкранный плеер влезает целиком. */
+@media (max-width: 899px) and (max-height: 740px) {
+  .player.is-open .player__panel {
+    gap: 12px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    padding-bottom: calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .player.is-open .player__art {
+    width: min(52vw, 240px);
+    height: min(52vw, 240px);
+    border-radius: 24px;
+  }
+
+  .player.is-open .player__art-letter {
+    font-size: 52px;
+  }
+
+  .player.is-open .player__title {
+    font-size: 19px;
+  }
+
+  .player.is-open .icon-btn--play {
+    width: 62px;
+    height: 62px;
+  }
+}
+
+/* ---------- Шторка таймера сна ---------- */
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(4, 5, 7, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: sheet-fade 0.18s ease both;
+}
+
+.sheet[hidden] {
+  display: none;
+}
+
+.sheet__panel {
+  width: 100%;
+  max-width: 520px;
+  padding: 20px 20px calc(18px + env(safe-area-inset-bottom, 0px));
+  border: 1px solid var(--line-strong);
+  border-bottom: 0;
+  border-radius: 26px 26px 0 0;
+  background: linear-gradient(180deg, #141922, #0d1016);
+  box-shadow: 0 -24px 70px rgba(0, 0, 0, 0.65);
+  animation: sheet-up 0.26s var(--ease) both;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sheet__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.sheet__close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.sheet__close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.sheet__text {
+  margin: 8px 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sheet__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sheet__option {
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  transition: border-color 0.18s, background 0.18s, color 0.18s;
+}
+
+.sheet__option:active {
+  transform: scale(0.98);
+}
+
+.sheet__option[aria-pressed="true"] {
+  border-color: rgba(255, 75, 62, 0.5);
+  background: rgba(255, 75, 62, 0.14);
+  color: var(--red-bright);
+}
+
+.sheet__status {
+  margin: 14px 0 0;
+  color: var(--dim);
+  font-size: 12px;
+  text-align: center;
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(18px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .sheet {
+    align-items: center;
+  }
+
+  .sheet__panel {
+    border-bottom: 1px solid var(--line-strong);
+    border-radius: 26px;
+  }
+
+  .sheet__options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet__panel {
+    animation: none;
+  }
+}

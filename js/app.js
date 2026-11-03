@@ -14,8 +14,8 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261104";
-import { Player } from "./player.js?v=20261104";
+} from "./data.js?v=20261105";
+import { Player } from "./player.js?v=20261105";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
 const FAV_KEY = "matushka:favorites";
@@ -40,6 +40,9 @@ const dockWave = document.getElementById("dock-wave");
 const dockFavCount = document.getElementById("dock-fav-count");
 const toastEl = document.getElementById("toast");
 const liveEl = document.getElementById("live");
+const sleepSheet = document.getElementById("sleep");
+const sleepBtn = document.getElementById("sleep-btn");
+const shareBtn = document.getElementById("share-btn");
 
 const player = new Player(document.getElementById("player"));
 
@@ -56,6 +59,13 @@ const state = {
 let toastTimer = 0;
 let searchTimer = 0;
 let firstRender = true;
+
+/* Таймер сна */
+const SLEEP_KEY = "matushka:sleep";
+let sleepTimer = 0;
+let sleepTick = 0;
+let sleepAt = 0;
+let sleepMinutes = 0;
 
 init();
 
@@ -75,6 +85,10 @@ async function init() {
   view.addEventListener("input", onViewInput);
   document.addEventListener("keydown", onKeydown);
   bindQueuePanel();
+  bindSleepSheet();
+  shareBtn?.addEventListener("click", shareCurrent);
+  sleepBtn?.addEventListener("click", () => openSleepSheet(true));
+  restoreSleep();
   updateFavoritesBadge();
 
   try {
@@ -859,6 +873,173 @@ function renderQueue() {
   if (active) active.scrollIntoView({ block: "nearest" });
 }
 
+/* ============================== Таймер сна и «Поделиться» ============================== */
+
+function bindSleepSheet() {
+  if (!sleepSheet) return;
+
+  sleepSheet.addEventListener("click", (event) => {
+    if (event.target === sleepSheet || event.target.closest("#sleep-close")) {
+      openSleepSheet(false);
+      return;
+    }
+
+    const option = event.target.closest("[data-sleep]");
+    if (option) setSleep(Number(option.dataset.sleep) || 0);
+  });
+}
+
+function openSleepSheet(open) {
+  if (!sleepSheet) return;
+
+  sleepSheet.hidden = !open;
+  sleepBtn?.setAttribute("aria-expanded", String(open));
+  document.body.classList.toggle("sheet-open", open);
+  updateSleepUi();
+}
+
+function setSleep(minutes) {
+  const ms = Math.max(0, Number(minutes) || 0) * 60000;
+
+  if (!ms) {
+    stopSleep();
+    showToast("Таймер сна выключен");
+    return;
+  }
+
+  const at = Date.now() + ms;
+  sleepMinutes = Math.round(ms / 60000);
+
+  try {
+    localStorage.setItem(SLEEP_KEY, String(at));
+  } catch {
+    /* приватный режим */
+  }
+
+  startSleep(at);
+  showToast(`Таймер сна: ${sleepLeftText(ms)}`);
+}
+
+function startSleep(at) {
+  sleepAt = at;
+  window.clearTimeout(sleepTimer);
+  window.clearInterval(sleepTick);
+
+  const left = sleepAt - Date.now();
+  if (left <= 0) {
+    stopSleep();
+    return;
+  }
+
+  sleepTimer = window.setTimeout(finishSleep, left);
+  sleepTick = window.setInterval(updateSleepUi, 15000);
+  updateSleepUi();
+}
+
+function stopSleep() {
+  sleepAt = 0;
+  sleepMinutes = 0;
+  window.clearTimeout(sleepTimer);
+  window.clearInterval(sleepTick);
+
+  try {
+    localStorage.removeItem(SLEEP_KEY);
+  } catch {
+    /* ignore */
+  }
+
+  updateSleepUi();
+}
+
+function finishSleep() {
+  stopSleep();
+  player.pause();
+  openSleepSheet(false);
+  showToast("Таймер сна: музыка выключена");
+}
+
+function restoreSleep() {
+  let at = 0;
+
+  try {
+    at = Number(localStorage.getItem(SLEEP_KEY)) || 0;
+  } catch {
+    at = 0;
+  }
+
+  if (at > Date.now()) startSleep(at);
+  else stopSleep();
+}
+
+function updateSleepUi() {
+  const left = sleepAt > Date.now() ? sleepAt - Date.now() : 0;
+  const active = left > 0;
+
+  sleepBtn?.classList.toggle("is-active", active);
+  sleepBtn?.setAttribute("aria-pressed", String(active));
+
+  const label = document.getElementById("sleep-label");
+  if (label) {
+    label.textContent = active ? `Сон · ${sleepLeftText(left)}` : "Таймер сна";
+  }
+
+  const status = document.getElementById("sleep-status");
+  if (status) {
+    status.hidden = !active;
+    status.textContent = active ? `Музыка выключится через ${sleepLeftText(left)}` : "";
+  }
+
+  document.querySelectorAll("#sleep-options [data-sleep]").forEach((option) => {
+    const value = Number(option.dataset.sleep) || 0;
+    const chosen = active ? value > 0 && value === sleepMinutes : value === 0;
+    option.setAttribute("aria-pressed", String(chosen));
+  });
+}
+
+function sleepLeftText(ms) {
+  const mins = Math.max(1, Math.ceil(ms / 60000));
+  if (mins < 60) return `${mins} мин`;
+
+  const hours = Math.floor(mins / 60);
+  const rest = mins % 60;
+  return rest ? `${hours} ч ${rest} мин` : `${hours} ч`;
+}
+
+async function shareCurrent() {
+  const track = player.current;
+  if (!track) {
+    showToast("Сначала включи трек");
+    return;
+  }
+
+  const url = new URL(
+    `#/artist/${encodeURIComponent(track.artistId)}?track=${encodeURIComponent(track.id)}`,
+    location.href,
+  ).href;
+
+  const data = {
+    title: `${track.title} — ${track.artistName}`,
+    text: `Слушай «${track.title}» — ${track.artistName} на «Матушке»`,
+    url,
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(data);
+      return;
+    } catch (error) {
+      if (error && error.name === "AbortError") return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("Ссылка на трек скопирована");
+  } catch {
+    showToast("Не удалось поделиться — скопируй адрес из строки браузера");
+  }
+}
+
 /* ============================== Плеер и «Волна» ============================== */
 
 function wavePool() {
@@ -927,6 +1108,7 @@ function onPlayerState() {
 
 function updatePlayerChrome() {
   const track = player.current;
+  document.body.classList.toggle("has-player", Boolean(track));
   player.setFavorite(Boolean(track) && state.favorites.has(track.id));
 
   const queueBtn = document.getElementById("queue-btn");
@@ -1134,6 +1316,11 @@ function onKeydown(event) {
   const tag = target?.tagName;
   const typing =
     ["INPUT", "TEXTAREA", "SELECT"].includes(tag) || target?.isContentEditable;
+
+  if (event.key === "Escape" && sleepSheet && !sleepSheet.hidden) {
+    openSleepSheet(false);
+    return;
+  }
 
   if (event.code === "Space") {
     if (typing || ["BUTTON", "A"].includes(tag)) return;

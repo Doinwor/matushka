@@ -5,7 +5,7 @@
  * (по клику на обложку — карточкой по центру).
  */
 
-import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261104";
+import { formatTime, gradientVars, initialsOf, shuffle } from "./data.js?v=20261105";
 
 const VOLUME_KEY = "matushka:volume";
 const LAST_KEY = "matushka:last";
@@ -123,6 +123,7 @@ export class Player {
     this.#bindUi();
     this.#bindAudio();
     this.#bindMediaSession();
+    this.#bindGestures();
     this.#restoreVolume();
 
     document.addEventListener("pagehide", () => this.#saveState());
@@ -242,6 +243,11 @@ export class Player {
     } else {
       this.audio.pause();
     }
+  }
+
+  /** Мягкая пауза (таймер сна, уход со страницы). */
+  pause() {
+    if (!this.audio.paused) this.audio.pause();
   }
 
   next({ auto = false } = {}) {
@@ -503,6 +509,83 @@ export class Player {
         this.#close();
       }
     });
+  }
+
+  /**
+   * Жесты в полноэкранном плеере:
+   * свайп вниз — свернуть, свайп влево/вправо — следующий/предыдущий трек.
+   */
+  #bindGestures() {
+    const panel = this.root.querySelector(".player__panel");
+    if (!panel) return;
+
+    let tracking = false;
+    let swiped = false;
+    let startX = 0;
+    let startY = 0;
+
+    panel.addEventListener("pointerdown", (event) => {
+      if (!this.root.classList.contains("is-open")) return;
+      if (event.pointerType === "mouse") return;
+      // Не мешаем перемотке и кнопкам инструментов.
+      if (event.target.closest("input, .player__seek, .player__tools, .player__close")) return;
+      tracking = true;
+      swiped = false;
+      startX = event.clientX;
+      startY = event.clientY;
+    });
+
+    panel.addEventListener("pointermove", (event) => {
+      if (!tracking) return;
+
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) swiped = true;
+
+      if (dy > 0 && Math.abs(dy) > Math.abs(dx)) {
+        this.root.style.translate = `0 ${Math.min(dy * 0.6, 160)}px`;
+        this.root.style.opacity = String(Math.max(0.35, 1 - dy / 480));
+      }
+    });
+
+    // После свайпа гасим «хвостовой» клик, чтобы плеер не закрылся сам.
+    panel.addEventListener(
+      "click",
+      (event) => {
+        if (!swiped) return;
+        swiped = false;
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true,
+    );
+
+    const end = (event) => {
+      if (!tracking) return;
+      tracking = false;
+
+      const dx = event.clientX - startX;
+      const dy = event.clientY - startY;
+
+      this.root.style.translate = "";
+      this.root.style.opacity = "";
+
+      if (!this.root.classList.contains("is-open")) return;
+
+      if (dy > 90 && Math.abs(dy) > Math.abs(dx)) {
+        this.#close();
+        return;
+      }
+
+      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+        if (dx < 0) this.next();
+        else this.prev();
+      }
+    };
+
+    panel.addEventListener("pointerup", end);
+    panel.addEventListener("pointercancel", end);
   }
 
   #bindAudio() {

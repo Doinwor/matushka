@@ -6,6 +6,11 @@
   <meta name="theme-color" content="#07080a">
   <meta name="color-scheme" content="dark">
   <meta name="description" content="Матушка — национальный музыкальный плеер. Моя волна, артисты и их треки.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Матушка">
+  <meta name="format-detection" content="telephone=no">
   <title>Матушка — русская музыка</title>
 
   <link rel="icon" href="img/icon.svg" type="image/svg+xml">
@@ -16,7 +21,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=20261104">
+  <link rel="stylesheet" href="css/style.css?v=20261105">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
@@ -191,6 +196,27 @@
         <input class="player__volume-range" id="volume" type="range"
                min="0" max="1" step="0.01" value="1" aria-label="Громкость">
       </div>
+
+      <div class="player__tools">
+        <button class="player__tool" id="sleep-btn" type="button"
+                aria-haspopup="dialog" aria-controls="sleep" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z"
+                  fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="sleep-label">Таймер сна</span>
+        </button>
+
+        <button class="player__tool" id="share-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 15V4m0 0L8.5 7.5M12 4l3.5 3.5M5 13v5.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V13"
+                  fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Поделиться</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -210,6 +236,33 @@
     <ol class="queue__list" id="queue-list"></ol>
   </div>
 
+  <div class="sheet" id="sleep" hidden>
+    <div class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="sleep-title">
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="sleep-title">Таймер сна</h2>
+        <button class="sheet__close" id="sleep-close" type="button" aria-label="Закрыть таймер сна">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <p class="sheet__text">Музыка выключится сама — можно спокойно засыпать.</p>
+
+      <div class="sheet__options" id="sleep-options">
+        <button class="sheet__option" type="button" data-sleep="0">Выкл</button>
+        <button class="sheet__option" type="button" data-sleep="15">15 минут</button>
+        <button class="sheet__option" type="button" data-sleep="30">30 минут</button>
+        <button class="sheet__option" type="button" data-sleep="45">45 минут</button>
+        <button class="sheet__option" type="button" data-sleep="60">1 час</button>
+        <button class="sheet__option" type="button" data-sleep="90">1,5 часа</button>
+      </div>
+
+      <p class="sheet__status" id="sleep-status" hidden></p>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="sr-only" id="live" role="status" aria-live="polite"></div>
 
@@ -217,6 +270,6 @@
     <div class="noscript">Для прослушивания музыки включите JavaScript в браузере.</div>
   </noscript>
 
-  <script type="module" src="js/app.js?v=20261104"></script>
+  <script type="module" src="js/app.js?v=20261105"></script>
 </body>
 </html>
