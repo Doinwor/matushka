@@ -14,8 +14,8 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261107";
-import { Player } from "./player.js?v=20261107";
+} from "./data.js?v=20261108";
+import { Player } from "./player.js?v=20261108";
 import {
   readSettings,
   patchSettings,
@@ -23,15 +23,10 @@ import {
   resolvedTheme,
   watchSystemTheme,
   DEFAULT_SETTINGS,
-} from "./settings.js?v=20261107";
-import {
-  Equalizer,
-  EQ_BANDS,
-  EQ_PRESETS,
-} from "./equalizer.js?v=20261107";
+} from "./settings.js?v=20261108";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.1.0";
 const APP_BUILD = "06.11.2026";
 const FAV_KEY = "matushka:favorites";
 const DISLIKE_KEY = "matushka:dislikes";
@@ -74,13 +69,10 @@ const state = {
   settings: readSettings(),
 };
 
-const equalizer = new Equalizer(player.audio, { onChange: syncEqualizerUi });
-
 let deferredInstallPrompt = null;
 let toastTimer = 0;
 let searchTimer = 0;
 let firstRender = true;
-let eqBuilt = false;
 
 /* Таймер сна */
 const SLEEP_KEY = "matushka:sleep";
@@ -126,11 +118,8 @@ async function init() {
   document.addEventListener("keydown", onKeydown);
   bindQueuePanel();
   bindSleepSheet();
-  bindEqualizer();
   shareBtn?.addEventListener("click", shareCurrent);
   sleepBtn?.addEventListener("click", () => openSleepSheet(true));
-  document.getElementById("eq-btn")?.addEventListener("click", () => openEqualizer(true));
-  document.getElementById("top-eq-btn")?.addEventListener("click", () => openEqualizer(true));
   document.getElementById("dislike-btn")?.addEventListener("click", dislikeCurrent);
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -909,15 +898,6 @@ function settingsIcon(name) {
   return icons[name] || "";
 }
 
-function eqPresetLabel() {
-  const preset = EQ_PRESETS[equalizer.state.preset];
-  return preset ? preset.label : "Свой";
-}
-
-function eqStatusText() {
-  return equalizer.state.enabled ? `Включён · ${eqPresetLabel()}` : "Выключен";
-}
-
 function dislikedListHtml() {
   const items = dislikedItems();
   if (!items.length) {
@@ -1043,15 +1023,8 @@ function renderSettings() {
             <span class="settings-card__icon">${settingsIcon("sound")}</span>
             <div>
               <h2>Звук</h2>
-              <p>Эквалайзер, скорость и загрузка треков.</p>
+              <p>Скорость воспроизведения и загрузка треков.</p>
             </div>
-          </div>
-
-          <div class="settings-row">
-            <div class="settings-row__label"><strong>Эквалайзер</strong><span id="settings-eq-status">${escapeHtml(eqStatusText())}</span></div>
-            <button class="btn btn--ghost settings-open-eq" type="button" data-action="open-eq">
-              ${settingsIcon("sound")}<span>Настроить</span>
-            </button>
           </div>
 
           <div class="settings-row">
@@ -1170,9 +1143,8 @@ function renderSettings() {
             <h3>Что нового в ${APP_VERSION}</h3>
             <ul>
               <li>Настройки: тема, акцент, анимация и плотность.</li>
-              <li>Настоящий 8-полосный эквалайзер с пресетами.</li>
               <li>Новый полноэкранный плеер на ПК.</li>
-              <li>Ползунки эквалайзера теперь корректно работают на телефоне.</li>
+              <li>Нелюбимые треки и кнопка «Реже в волне».</li>
             </ul>
           </div>
         </section>
@@ -1199,9 +1171,6 @@ function syncSettingsUi() {
     element.classList.toggle("is-active", active);
     element.setAttribute("aria-checked", String(active));
   });
-
-  const eqStatus = document.getElementById("settings-eq-status");
-  if (eqStatus) eqStatus.textContent = eqStatusText();
 }
 
 function updateSetting(key, value) {
@@ -1237,145 +1206,6 @@ function toggleSetting(key) {
 
   syncSettingsUi();
 }
-
-/* ============================== Эквалайзер ============================== */
-
-function buildEqualizer() {
-  if (eqBuilt) return;
-  eqBuilt = true;
-
-  const presets = document.getElementById("eq-presets");
-  if (presets) {
-    presets.innerHTML = Object.entries(EQ_PRESETS)
-      .map(
-        ([key, preset]) => `<button class="eq__preset" type="button" data-eq-preset="${key}"
-          aria-pressed="false">${escapeHtml(preset.label)}</button>`,
-      )
-      .join("");
-  }
-
-  const bands = document.getElementById("eq-bands");
-  if (bands) {
-    bands.innerHTML = EQ_BANDS.map(
-      (band, index) => `
-        <label class="eq__band">
-          <span class="eq__db" id="eq-db-${index}">0</span>
-          <span class="eq__slider-wrap">
-            <input class="eq__slider" type="range" min="-12" max="12" step="1" value="0"
-                   data-eq-band="${index}" aria-label="${band.hz} Гц">
-          </span>
-          <span class="eq__hz">${band.label}</span>
-        </label>`,
-    ).join("");
-  }
-}
-
-function bindEqualizer() {
-  buildEqualizer();
-
-  const sheet = document.getElementById("eq");
-  if (!sheet) return;
-
-  sheet.addEventListener("click", (event) => {
-    if (event.target === sheet || event.target.closest("#eq-close")) {
-      openEqualizer(false);
-      return;
-    }
-
-    const preset = event.target.closest("[data-eq-preset]");
-    if (preset) {
-      equalizer.applyPreset(preset.dataset.eqPreset);
-      haptic();
-      showToast(`Эквалайзер: ${EQ_PRESETS[preset.dataset.eqPreset]?.label || "пресет"}`);
-      return;
-    }
-
-    if (event.target.closest("#eq-enabled")) {
-      const on = equalizer.toggle();
-      haptic();
-      showToast(on ? "Эквалайзер включён" : "Эквалайзер выключен");
-      return;
-    }
-
-    if (event.target.closest('[data-action="eq-reset"]')) {
-      equalizer.reset();
-      haptic();
-      showToast("Эквалайзер сброшен");
-    }
-  });
-
-  sheet.addEventListener("input", (event) => {
-    const band = event.target.closest("[data-eq-band]");
-    if (band) {
-      const index = Number(band.dataset.eqBand);
-      if (!equalizer.state.enabled) equalizer.setEnabled(true);
-      equalizer.setBand(index, Number(band.value));
-      return;
-    }
-
-    if (event.target.id === "eq-preamp") {
-      if (!equalizer.state.enabled) equalizer.setEnabled(true);
-      equalizer.setPreamp(Number(event.target.value));
-    }
-  });
-}
-
-function openEqualizer(open) {
-  const sheet = document.getElementById("eq");
-  if (!sheet) return;
-
-  buildEqualizer();
-  sheet.hidden = !open;
-  document.body.classList.toggle("sheet-open", open);
-
-  const button = document.getElementById("eq-btn");
-  button?.setAttribute("aria-expanded", String(open));
-
-  if (open) {
-    syncEqualizerUi();
-    document.getElementById("eq-close")?.focus({ preventScroll: true });
-  } else {
-    document.getElementById("eq-btn")?.focus({ preventScroll: true });
-  }
-}
-
-function syncEqualizerUi() {
-  const s = equalizer.state;
-
-  const toggle = document.getElementById("eq-enabled");
-  toggle?.classList.toggle("is-active", s.enabled);
-  toggle?.setAttribute("aria-checked", String(s.enabled));
-
-  const status = document.getElementById("eq-status");
-  if (status) status.textContent = eqStatusText();
-
-  const label = document.getElementById("eq-label");
-  if (label) label.textContent = s.enabled ? `Эквалайзер · ${eqPresetLabel()}` : "Эквалайзер";
-
-  const settingsStatus = document.getElementById("settings-eq-status");
-  if (settingsStatus) settingsStatus.textContent = eqStatusText();
-
-  document.querySelectorAll("[data-eq-band]").forEach((input) => {
-    const index = Number(input.dataset.eqBand);
-    const value = s.bands[index] ?? 0;
-    input.value = String(value);
-    const out = document.getElementById(`eq-db-${index}`);
-    if (out) out.textContent = value > 0 ? `+${value}` : String(value);
-  });
-
-  const preamp = document.getElementById("eq-preamp");
-  if (preamp) preamp.value = String(s.preamp);
-  const preampOut = document.getElementById("eq-preamp-value");
-  if (preampOut) preampOut.textContent = `${s.preamp > 0 ? "+" : ""}${s.preamp} дБ`;
-
-  document.querySelectorAll("[data-eq-preset]").forEach((button) => {
-    const active = s.enabled && s.preset === button.dataset.eqPreset;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-}
-
-
 
 function bindQueuePanel() {
   const panel = document.getElementById("queue");
@@ -1882,11 +1712,6 @@ function onViewClick(event) {
       return;
     }
 
-    if (action === "open-eq") {
-      openEqualizer(true);
-      return;
-    }
-
     if (action === "reset-settings") {
       state.settings = patchSettings({ ...DEFAULT_SETTINGS });
       applySettings(state.settings);
@@ -2106,12 +1931,6 @@ function onKeydown(event) {
     return;
   }
 
-  const eqSheet = document.getElementById("eq");
-  if (event.key === "Escape" && eqSheet && !eqSheet.hidden) {
-    openEqualizer(false);
-    return;
-  }
-
   if (event.code === "Space") {
     if (typing || ["BUTTON", "A"].includes(tag)) return;
     if (!player.current) return;
@@ -2121,11 +1940,6 @@ function onKeydown(event) {
   }
 
   if (typing) return;
-
-  if (event.key === "e" || event.key === "E" || event.key === "у") {
-    openEqualizer(true);
-    return;
-  }
 
   if (event.key === "ArrowRight") {
     if (!player.current) return;

@@ -42,7 +42,7 @@
     })();
   </script>
 
-  <link rel="stylesheet" href="css/style.css?v=20261107">
+  <link rel="stylesheet" href="css/style.css?v=20261108">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
@@ -70,17 +70,6 @@
                 aria-label="Включить мою волну" aria-pressed="false">
           <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
           <span class="wave-pill__text">Моя волна</span>
-        </button>
-
-        <button class="topbar__gear" id="top-eq-btn" type="button"
-                aria-label="Эквалайзер" title="Эквалайзер">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 4v16M12 4v16M19 4v16" fill="none" stroke="currentColor"
-                  stroke-width="1.8" stroke-linecap="round"/>
-            <circle cx="5" cy="9" r="2.2" fill="currentColor"/>
-            <circle cx="12" cy="15" r="2.2" fill="currentColor"/>
-            <circle cx="19" cy="7" r="2.2" fill="currentColor"/>
-          </svg>
         </button>
 
         <a class="topbar__gear" href="#/settings" aria-label="Настройки" title="Настройки">
@@ -251,18 +240,6 @@
       </div>
 
       <div class="player__tools">
-        <button class="player__tool" id="eq-btn" type="button"
-                aria-haspopup="dialog" aria-controls="eq" aria-expanded="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 4v16M12 4v16M19 4v16" fill="none" stroke="currentColor"
-                  stroke-width="1.8" stroke-linecap="round"/>
-            <circle cx="5" cy="9" r="2.2" fill="currentColor"/>
-            <circle cx="12" cy="15" r="2.2" fill="currentColor"/>
-            <circle cx="19" cy="7" r="2.2" fill="currentColor"/>
-          </svg>
-          <span id="eq-label">Эквалайзер</span>
-        </button>
-
         <button class="player__tool" id="dislike-btn" type="button" disabled
                 title="Реже показывать этот трек в волне">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -337,46 +314,6 @@
     </div>
   </div>
 
-  <div class="sheet eq" id="eq" hidden>
-    <div class="sheet__panel eq__panel" role="dialog" aria-modal="true" aria-labelledby="eq-title">
-      <div class="sheet__head">
-        <div class="eq__heading">
-          <span class="eq__eyebrow">Звук</span>
-          <h2 class="sheet__title" id="eq-title">Эквалайзер</h2>
-        </div>
-        <div class="eq__head-actions">
-          <button class="eq__switch" id="eq-enabled" type="button" role="switch"
-                  aria-checked="false" aria-label="Включить эквалайзер">
-            <span></span>
-          </button>
-          <button class="sheet__close" id="eq-close" type="button" aria-label="Закрыть эквалайзер">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <p class="sheet__text">Настрой звук под себя: пресеты или ручная тонкая настройка. Работает на этом устройстве.</p>
-
-      <div class="eq__presets" id="eq-presets" role="group" aria-label="Пресеты эквалайзера"></div>
-
-      <div class="eq__bands" id="eq-bands"></div>
-
-      <div class="eq__preamp">
-        <label for="eq-preamp">Предусиление</label>
-        <input type="range" id="eq-preamp" min="-12" max="12" step="1" value="0" aria-label="Предусиление">
-        <output id="eq-preamp-value">0 дБ</output>
-      </div>
-
-      <div class="eq__foot">
-        <button class="btn btn--ghost eq__reset" type="button" data-action="eq-reset">Сбросить</button>
-        <span class="eq__status" id="eq-status">Выключен</span>
-      </div>
-    </div>
-  </div>
-
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="sr-only" id="live" role="status" aria-live="polite"></div>
 
@@ -384,6 +321,6 @@
     <div class="noscript">Для прослушивания музыки включите JavaScript в браузере.</div>
   </noscript>
 
-  <script type="module" src="js/app.js?v=20261107"></script>
+  <script type="module" src="js/app.js?v=20261108"></script>
 </body>
 </html>
