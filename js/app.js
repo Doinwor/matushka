@@ -14,8 +14,8 @@ import {
   gradientVars,
   initialsOf,
   pluralTracks,
-} from "./data.js?v=20261106";
-import { Player } from "./player.js?v=20261106";
+} from "./data.js?v=20261107";
+import { Player } from "./player.js?v=20261107";
 import {
   readSettings,
   patchSettings,
@@ -23,15 +23,15 @@ import {
   resolvedTheme,
   watchSystemTheme,
   DEFAULT_SETTINGS,
-} from "./settings.js?v=20261106";
+} from "./settings.js?v=20261107";
 import {
   Equalizer,
   EQ_BANDS,
   EQ_PRESETS,
-} from "./equalizer.js?v=20261106";
+} from "./equalizer.js?v=20261107";
 
 const DEFAULT_TITLE = "Матушка — русская музыка";
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.0.1";
 const APP_BUILD = "06.11.2026";
 const FAV_KEY = "matushka:favorites";
 const DISLIKE_KEY = "matushka:dislikes";
@@ -130,6 +130,7 @@ async function init() {
   shareBtn?.addEventListener("click", shareCurrent);
   sleepBtn?.addEventListener("click", () => openSleepSheet(true));
   document.getElementById("eq-btn")?.addEventListener("click", () => openEqualizer(true));
+  document.getElementById("top-eq-btn")?.addEventListener("click", () => openEqualizer(true));
   document.getElementById("dislike-btn")?.addEventListener("click", dislikeCurrent);
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
@@ -1171,6 +1172,7 @@ function renderSettings() {
               <li>Настройки: тема, акцент, анимация и плотность.</li>
               <li>Настоящий 8-полосный эквалайзер с пресетами.</li>
               <li>Новый полноэкранный плеер на ПК.</li>
+              <li>Ползунки эквалайзера теперь корректно работают на телефоне.</li>
             </ul>
           </div>
         </section>
@@ -1258,8 +1260,10 @@ function buildEqualizer() {
       (band, index) => `
         <label class="eq__band">
           <span class="eq__db" id="eq-db-${index}">0</span>
-          <input class="eq__slider" type="range" min="-12" max="12" step="1" value="0"
-                 data-eq-band="${index}" aria-label="${band.hz} Гц">
+          <span class="eq__slider-wrap">
+            <input class="eq__slider" type="range" min="-12" max="12" step="1" value="0"
+                   data-eq-band="${index}" aria-label="${band.hz} Гц">
+          </span>
           <span class="eq__hz">${band.label}</span>
         </label>`,
     ).join("");
