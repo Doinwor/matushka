@@ -30,16 +30,22 @@ function writeJSON(key, value) {
 
 /**
  * Перемешивает треки так, чтобы один артист не шёл несколько раз подряд.
- * `recentIds` — что недавно звучало, `blockedArtists` — кого реже показывать.
+ * `recentIds` — что недавно звучало, `blockedTracks` — треки, которые
+ * пользователь попросил показывать реже, `blockedArtists` — нежелательные артисты.
  */
-export function smartShuffle(tracks, { recentIds = [], blockedArtists = new Set() } = {}) {
+export function smartShuffle(
+  tracks,
+  { recentIds = [], blockedArtists = new Set(), blockedTracks = new Set() } = {},
+) {
   if (!tracks.length) return [];
 
   const fresh = tracks.filter((track) => !recentIds.includes(track.id));
   const base = fresh.length >= Math.min(6, tracks.length) ? fresh : tracks.slice();
-  const allowed = blockedArtists.size
-    ? base.filter((track) => !blockedArtists.has(track.artistId))
-    : base;
+  const allowed = base.filter(
+    (track) =>
+      !blockedTracks.has(track.id) &&
+      !blockedArtists.has(track.artistId),
+  );
   const pool = allowed.length ? allowed : base;
 
   const byArtist = new Map();
@@ -80,8 +86,9 @@ export class Player {
     this.index = -1;
     this.mode = null; // "wave" | "artist"
     this.pool = null; // все треки для бесконечной волны
+    this.preloadEnabled = true;
 
-    // Артисты, которых пользователь попросил реже показывать в «Волне».
+    // Треки, которые пользователь попросил реже показывать в «Волне».
     this.disliked = new Set();
 
     this.onStateChange = null;
@@ -89,6 +96,7 @@ export class Player {
     this.onQueueChange = null;
     this.onToggleFavorite = null;
     this.onToggleQueue = null;
+    this.onDislike = null;
 
     this.startAt = 0;
     this.lastPersist = 0;
@@ -153,7 +161,7 @@ export class Player {
     const lastId = this.current?.id;
     const next = smartShuffle(this.pool, {
       recentIds,
-      blockedArtists: this.disliked,
+      blockedTracks: this.disliked,
     });
     // Не начинаем новый круг с того же трека, что только что играл.
     if (next.length > 1 && next[0].id === lastId) {
@@ -219,7 +227,7 @@ export class Player {
     if (saved.mode === "wave" && library.allTracks?.length) {
       const rest = smartShuffle(
         library.allTracks.filter((item) => item.id !== track.id),
-        { recentIds: [track.id] },
+        { recentIds: [track.id], blockedTracks: this.disliked },
       );
       this.pool = library.allTracks.slice();
       this.queue = [track, ...rest];
@@ -321,13 +329,23 @@ export class Player {
     this.#emitQueue();
   }
 
-  /** «Не это»: артист реже появляется в волне, играет следующий трек. */
+  /** «Не это»: трек больше не попадает в волну, играет следующий. */
   dislike() {
     const track = this.current;
     if (!track) return false;
-    this.disliked.add(track.artistId);
+    this.disliked.add(track.id);
+    this.onDislike?.(track.id);
     this.next();
     return true;
+  }
+
+  /** Загружает сохранённый список нелюбимых треков. */
+  setDisliked(ids) {
+    this.disliked = new Set(Array.isArray(ids) ? ids : [...(ids || [])]);
+  }
+
+  isDisliked(id) {
+    return this.disliked.has(String(id));
   }
 
   seekBy(seconds) {
@@ -349,6 +367,17 @@ export class Player {
     this.ui.fav?.setAttribute("aria-pressed", String(Boolean(active)));
   }
 
+  setSpeed(rate) {
+    const value = Math.min(2, Math.max(0.5, Number(rate) || 1));
+    this.audio.playbackRate = value;
+    this.audio.defaultPlaybackRate = value;
+  }
+
+  setPreload(enabled) {
+    this.preloadEnabled = enabled !== false;
+    if (!this.preloadEnabled) this.#clearPreload();
+  }
+
   persist() {
     this.#saveState();
   }
@@ -363,7 +392,7 @@ export class Player {
     ];
     const next = smartShuffle(this.pool, {
       recentIds,
-      blockedArtists: this.disliked,
+      blockedTracks: this.disliked,
     });
     if (next.length > 1 && next[0].id === lastId) {
       [next[0], next[1]] = [next[1], next[0]];
@@ -728,6 +757,7 @@ export class Player {
   /* ---------- Предзагрузка следующего трека ---------- */
 
   #preloadNext() {
+    if (!this.preloadEnabled) return;
     const nextTrack = this.queue[this.index + 1];
     if (!nextTrack || nextTrack.id === this.preloadedTrackId) return;
 

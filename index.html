@@ -21,7 +21,28 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="css/style.css?v=20261105">
+  <script>
+    // Тема применяется до отрисовки — без вспышки светлого фона.
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem("matushka:settings") || "{}");
+        var theme = s.theme === "light"
+          ? "light"
+          : s.theme === "system"
+            ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+            : "dark";
+        var root = document.documentElement;
+        root.dataset.theme = theme;
+        root.dataset.accent = s.accent || "red";
+        root.dataset.motion = s.motion || "auto";
+        root.dataset.density = s.density || "comfortable";
+        root.dataset.ambient = s.ambient === false ? "off" : "on";
+        root.style.colorScheme = theme;
+      } catch (e) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="css/style.css?v=20261106">
 </head>
 <body>
   <a class="skip-link" href="#view">Перейти к содержимому</a>
@@ -44,11 +65,21 @@
         </span>
       </a>
 
-      <button class="wave-pill" id="top-wave" type="button" title="Моя волна"
-              aria-label="Включить мою волну" aria-pressed="false">
-        <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
-        <span class="wave-pill__text">Моя волна</span>
-      </button>
+      <div class="topbar__actions">
+        <button class="wave-pill" id="top-wave" type="button" title="Моя волна"
+                aria-label="Включить мою волну" aria-pressed="false">
+          <span class="eq" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="wave-pill__text">Моя волна</span>
+        </button>
+
+        <a class="topbar__gear" href="#/settings" aria-label="Настройки" title="Настройки">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/>
+            <path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.8-1.4-1.9-3.3-2.2.9a7.8 7.8 0 0 0-2.6-1.5L14.2 2h-4.4L9.5 5.2a7.8 7.8 0 0 0-2.6 1.5l-2.2-.9L2.8 9.1l1.8 1.4a7.7 7.7 0 0 0 0 3l-1.8 1.4 1.9 3.3 2.2-.9a7.8 7.8 0 0 0 2.6 1.5l.3 3.2h4.4l.3-3.2a7.8 7.8 0 0 0 2.6-1.5l2.2.9 1.9-3.3-1.8-1.4Z"
+                  fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
     </div>
   </header>
 
@@ -109,6 +140,17 @@
         </span>
         <span class="dock__label">Избранное</span>
         <span class="dock__badge" id="dock-fav-count" hidden>0</span>
+      </a>
+
+      <a class="dock__item" href="#/settings" data-dock="settings">
+        <span class="dock__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.9"/>
+            <path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l1.8-1.4-1.9-3.3-2.2.9a7.8 7.8 0 0 0-2.6-1.5L14.2 2h-4.4L9.5 5.2a7.8 7.8 0 0 0-2.6 1.5l-2.2-.9L2.8 9.1l1.8 1.4a7.7 7.7 0 0 0 0 3l-1.8 1.4 1.9 3.3 2.2-.9a7.8 7.8 0 0 0 2.6 1.5l.3 3.2h4.4l.3-3.2a7.8 7.8 0 0 0 2.6-1.5l2.2.9 1.9-3.3-1.8-1.4Z"
+                  fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="dock__label">Настройки</span>
       </a>
     </div>
   </nav>
@@ -198,6 +240,27 @@
       </div>
 
       <div class="player__tools">
+        <button class="player__tool" id="eq-btn" type="button"
+                aria-haspopup="dialog" aria-controls="eq" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 4v16M12 4v16M19 4v16" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="5" cy="9" r="2.2" fill="currentColor"/>
+            <circle cx="12" cy="15" r="2.2" fill="currentColor"/>
+            <circle cx="19" cy="7" r="2.2" fill="currentColor"/>
+          </svg>
+          <span id="eq-label">Эквалайзер</span>
+        </button>
+
+        <button class="player__tool" id="dislike-btn" type="button" disabled
+                title="Реже показывать этот трек в волне">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16.2 3H8.9a2 2 0 0 0-1.9 1.4L4.2 12v1.6a2 2 0 0 0 2 2h3.4l-.6 3.8A2 2 0 0 0 11 21.6a2 2 0 0 0 1.8-1.1l2.4-4.9h1.6a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"
+                  fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          </svg>
+          <span>Реже в волне</span>
+        </button>
+
         <button class="player__tool" id="sleep-btn" type="button"
                 aria-haspopup="dialog" aria-controls="sleep" aria-expanded="false">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -263,6 +326,46 @@
     </div>
   </div>
 
+  <div class="sheet eq" id="eq" hidden>
+    <div class="sheet__panel eq__panel" role="dialog" aria-modal="true" aria-labelledby="eq-title">
+      <div class="sheet__head">
+        <div class="eq__heading">
+          <span class="eq__eyebrow">Звук</span>
+          <h2 class="sheet__title" id="eq-title">Эквалайзер</h2>
+        </div>
+        <div class="eq__head-actions">
+          <button class="eq__switch" id="eq-enabled" type="button" role="switch"
+                  aria-checked="false" aria-label="Включить эквалайзер">
+            <span></span>
+          </button>
+          <button class="sheet__close" id="eq-close" type="button" aria-label="Закрыть эквалайзер">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <p class="sheet__text">Настрой звук под себя: пресеты или ручная тонкая настройка. Работает на этом устройстве.</p>
+
+      <div class="eq__presets" id="eq-presets" role="group" aria-label="Пресеты эквалайзера"></div>
+
+      <div class="eq__bands" id="eq-bands"></div>
+
+      <div class="eq__preamp">
+        <label for="eq-preamp">Предусиление</label>
+        <input type="range" id="eq-preamp" min="-12" max="12" step="1" value="0" aria-label="Предусиление">
+        <output id="eq-preamp-value">0 дБ</output>
+      </div>
+
+      <div class="eq__foot">
+        <button class="btn btn--ghost eq__reset" type="button" data-action="eq-reset">Сбросить</button>
+        <span class="eq__status" id="eq-status">Выключен</span>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="sr-only" id="live" role="status" aria-live="polite"></div>
 
@@ -270,6 +373,6 @@
     <div class="noscript">Для прослушивания музыки включите JavaScript в браузере.</div>
   </noscript>
 
-  <script type="module" src="js/app.js?v=20261105"></script>
+  <script type="module" src="js/app.js?v=20261106"></script>
 </body>
 </html>
